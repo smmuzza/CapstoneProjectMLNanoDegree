@@ -22,15 +22,25 @@ class Memory():
         return [self.buffer[ii] for ii in idx]
     
     
-
 import tensorflow as tf
 
 class QNetwork:
-    def __init__(self, learning_rate=0.01, state_size=4, 
-                 action_size=2, hidden_size=10, 
+    def __init__(self, learning_rate=0.0001, state_size=4, 
+                 action_size=2, hidden_size=64, 
                  name='QNetwork'):
+        
+        # Memory parameters
+        self.memory_size = 10000               # memory capacity
+        self.batch_size = 20                   # experience mini-batch size
+        self.pretrain_length = self.batch_size # number experiences to pretrain the memory
+        self.memory = Memory(max_size=self.memory_size)
+        
         # state inputs to the Q-network
         with tf.variable_scope(name):
+            # Network parameters
+            self.hidden_size = hidden_size      # number of units in each Q-network hidden layer
+            self.learning_rate = learning_rate  # Q-network learning rate
+            
             self.inputs_ = tf.placeholder(tf.float32, [None, state_size], name='inputs')
             
             # One hot encode the actions to later choose the Q-value for the action
