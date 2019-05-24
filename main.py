@@ -146,7 +146,7 @@ with tf.Session() as sess:
                 next_state = np.zeros(state.shape)
                 t = max_steps
                 
-                if ep > pretrain_length:
+                if ep > agent.pretrain_length:
                     print('Episode: {}'.format(ep),
                           'Total reward: {}'.format(total_reward),
                           'Training loss: {:.4f}'.format(loss),
@@ -159,7 +159,7 @@ with tf.Session() as sess:
                 rewards_list.append((ep, total_reward))
                 
                 # Add experience to memory
-                memory.add((state, action, reward, next_state))
+                agent.memory.add((state, action, reward, next_state))
                 
                 # Start new episode
                 env.reset()
@@ -168,15 +168,15 @@ with tf.Session() as sess:
 
             else:
                 # Add experience to memory
-                memory.add((state, action, reward, next_state))
+                agent.memory.add((state, action, reward, next_state))
                 state = next_state
                 t += 1
             
 
             # TODO check min memory size here? If big enough, train
-            if ep > pretrain_length:
+            if ep > agent.pretrain_length:
                 # Sample mini-batch from memory
-                batch = memory.sample(batch_size)
+                batch = agent.memory.sample(agent.batch_size)
                 states = np.array([each[0] for each in batch])
                 actions = np.array([each[1] for each in batch])
                 rewards = np.array([each[2] for each in batch])
