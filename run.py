@@ -14,7 +14,8 @@ def run(agent, env, num_episodes=20000, mode='train'):
     for i_episode in range(1, num_episodes+1):
         # Initialize episode
         state = env.reset()
-        action = agent.reset_episode(state)
+        action = agent.reset_episode()
+#        action = agent.reset_episode()
         total_reward = 0
         done = False
 
@@ -22,7 +23,8 @@ def run(agent, env, num_episodes=20000, mode='train'):
         while not done:
             state, reward, done, info = env.step(action)
             total_reward += reward
-            action = agent.act(state, reward, done, mode)
+#            action = agent.act(state, reward, done, mode)
+            action = agent.act(state)
 
         # Save final score
         scores.append(total_reward)
