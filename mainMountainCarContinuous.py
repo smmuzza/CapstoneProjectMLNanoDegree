@@ -23,20 +23,26 @@ def OUNoise():
         state += -theta*state+sigma*np.random.randn()
 
 # Setup
-#env = gym.make('CarRacing-v0')      # make the environment
 
-# Create an environment and set random seed
+# Classic Control - Continuous State and Discrete Action Spaces
 #env = gym.make('MountainCar-v0') # needs Discretized or better
 #env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
 #env = gym.make('Taxi-v2') # discrete state and action space
 
-#env = gym.make('Pendulum-v0') # continuous only
-env = gym.make('MountainCarContinuous-v0') # continuous only
+# Classic Control - Continuous State and Action Spaces
+env = gym.make('Pendulum-v0') # continuous only
+#env = gym.make('MountainCarContinuous-v0') # continuous only
+
+# Box 2D
 #env = gym.make('BipedalWalker-v2') # continuous only
+#env = gym.make('CarRacing-v0')      # make the environment
+
+# Atari
+#env = gym.make('MsPacman-v0')
 
 
-# Initialize the simulation
+# Initialize the simulation with a random seed
 env.seed(505);
 env.reset()
 state = env.reset()
@@ -127,8 +133,8 @@ results = pd.read_csv('ddpg_agent_mountain_car_continuous_data.txt')
 episode_rewards_mean = results.groupby(['episode'])[['reward']].mean()
 episode_rewards_sum = results.groupby(['episode'])[['reward']].sum()
 
-smoothed_mean = episode_rewards_mean.rolling(100).mean() 
-smoothed_sum = episode_rewards_sum.rolling(100).mean() 
+smoothed_mean = episode_rewards_mean.rolling(25).mean() 
+smoothed_sum = episode_rewards_sum.rolling(25).mean() 
 
 #print(episode_rewards)
 plt.figure(1)
@@ -145,7 +151,7 @@ plt.plot(episode_rewards_sum, label='sum rewards')
 plt.plot(smoothed_sum, label='running mean')
 plt.legend()
 axes = plt.gca()
-axes.set_ylim([-10,100])
+axes.set_ylim([-100,100])
 plt.show()  
 
 

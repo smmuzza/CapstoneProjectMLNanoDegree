@@ -24,59 +24,72 @@ TODO
 
 1. try the idea of sleeping the network with a different memory buffer size
 2. try transfer learning between environments (batch norm to help?)
+3. try to generalize agents between different environments
 
 """
 
 # Create an environment and set random seed
+
+# Toy Text - Discrete state and action space
+#env = gym.make('Taxi-v2') # discrete state and action space
+
+# Classic Control - Continuous State and Discrete Action Spaces
 env = gym.make('MountainCar-v0') # needs Discretized or better
 #env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
-#env = gym.make('Taxi-v2') # discrete state and action space
 
+# Classic Control - Continuous State and Action Spaces
 #env = gym.make('Pendulum-v0') # continuous only
 #env = gym.make('MountainCarContinuous-v0') # continuous only
 
-env.seed(505);
+# Box 2D
+#env = gym.make('BipedalWalker-v2') # continuous only
+#env = gym.make('CarRacing-v0')      # make the environment
+
+# Atari
+#env = gym.make('MsPacman-v0')
+
+
 
 # Initialize the simulation
+env.seed(505);
 env.reset()
 state = env.reset()
 
 # Examine the environment
 from visuals import examine_environment, examine_environment_MountainCar_discretized, examine_environment_Acrobat_tiled
-examine_environment(env)
+#examine_environment(env)
 
-state_size0 = env.observation_space.shape
+state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
-print("env.observation_space.shape[0]", state_size0)
-#print("env.observation_space.shape[1]", state_size1)
+print("env.observation_space.shape[0]", state_size)
 print("env.action_space", action_size)
 
 """
 # create the agent discretized state space Q Learning
 """
-from agents import discretize as dis
-from agents import QLearningAgentDiscretized as qlad
-state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
-agent = qlad.QLearningAgent(env, state_grid)
+#from agents import discretize as dis
+#from agents import QLearningAgentDiscretized as qlad
+#state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
+#agent = qlad.QLearningAgent(env, state_grid)
 
 """
 # create the agent for tiled state space Q Learning
 """
-#from agents import QLearningAgentDiscretizedTiles as qlat
-#n_bins = 20
-#bins = tuple([n_bins]*env.observation_space.shape[0])
-#offset_pos = (env.observation_space.high - env.observation_space.low)/(3*n_bins)
-#
-#tiling_specs = [(bins, -offset_pos),
-#                (bins, tuple([0.0]*env.observation_space.shape[0])),
-#                (bins, offset_pos)]
-#
-#tq = qlat.TiledQTable(env.observation_space.low, 
-#                 env.observation_space.high, 
-#                 tiling_specs, 
-#                 env.action_space.n)
-#agent = qlat.QLearningAgentDisTiles(env, tq)
+from agents import QLearningAgentDiscretizedTiles as qlat
+n_bins = 20
+bins = tuple([n_bins]*env.observation_space.shape[0])
+offset_pos = (env.observation_space.high - env.observation_space.low)/(3*n_bins)
+
+tiling_specs = [(bins, -offset_pos),
+                (bins, tuple([0.0]*env.observation_space.shape[0])),
+                (bins, offset_pos)]
+
+tq = qlat.TiledQTable(env.observation_space.low, 
+                 env.observation_space.high, 
+                 tiling_specs, 
+                 env.action_space.n)
+agent = qlat.QLearningAgentDisTiles(env, tq)
 
 
 # Specialized enviroment examination
@@ -101,7 +114,7 @@ agent = qlad.QLearningAgent(env, state_grid)
 #tf.reset_default_graph()
 #
 #
-#agent = qnet.QNetwork(name='main')
+#agent = qnet.QNetwork(name='main', state_size=state_size, action_size=action_size)
 #
 ## Take one random step to get the pole and cart moving
 #state, reward, done, _ = env.step(env.action_space.sample())
@@ -193,7 +206,8 @@ agent = qlad.QLearningAgent(env, state_grid)
 #                
 #                # Set target_Qs to 0 for states where episode ends
 #                episode_ends = (next_states == np.zeros(states[0].shape)).all(axis=1)
-#                target_Qs[episode_ends] = (0, 0)
+#                target_Qs[episode_ends] = 0#(0, 0) # CartPole-v1
+##                target_Qs[episode_ends] = (0, 0)  # MountainCar-v0
 #                
 #                targets = rewards + gamma * np.max(target_Qs, axis=1)
 #    
@@ -240,11 +254,6 @@ agent = qlad.QLearningAgent(env, state_grid)
 #plt.xlabel('Episode')
 #plt.ylabel('Total Reward')
 
-"""
-# create a DDPG agent
-"""
-#from agents.DDPG import DDPG
-#agent = DDPG(env)
 
 """
 # run the simulation
@@ -267,14 +276,14 @@ test_scores = sim.run(agent, env, num_episodes=100, mode='test')
 print("[TEST] Completed {} episodes with avg. score = {}".format(len(test_scores), np.mean(test_scores)))
 _ = plot_scores(test_scores)
 
-plot_q_table(agent.q_table)
+#plot_q_table(agent.q_table)
 
 """
 # Watch Agent
 """
 state = env.reset()
 score = 0
-for t in range(3000):
+for t in range(5000):
     # get action from agent
     action = agent.act(state, mode='test')
        
@@ -289,4 +298,4 @@ print('Final score:', score)
 """
 # Exit Environment
 """
-env.close()
+#env.close()
