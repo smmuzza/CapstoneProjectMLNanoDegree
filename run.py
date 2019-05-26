@@ -13,14 +13,15 @@ def run(agent, env, num_episodes=20000, mode='train'):
     max_avg_score = -np.inf
     for i_episode in range(1, num_episodes+1):
         # Initialize episode
-        state = env.reset() # reset environment        
+        state = env.reset()        # reset environment        
         agent.reset_episode(state) # reset agent
-        total_reward = 0
+        episode_total_reward = 0   # total rewards per episode
         done = False
 
         # Interact with the Environment in steps until done
         while not done:
             # 1. agent action given environment state
+            #    assumes explore/exploit as part of agent design
             # 2. enviroment changes based on action
             # 3. (training mode) learn from environment feedback 
             #    (new state, reward, done) to agent
@@ -33,10 +34,10 @@ def run(agent, env, num_episodes=20000, mode='train'):
             
             agent.step(state)
 
-            total_reward += reward
+            episode_total_reward += reward
 
-        # Save final score
-        scores.append(total_reward)
+        # Save final score of the episode
+        scores.append(episode_total_reward)
         
         # Print episode stats
         if mode == 'train':

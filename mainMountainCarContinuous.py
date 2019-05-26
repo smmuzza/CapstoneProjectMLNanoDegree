@@ -33,8 +33,8 @@ def OUNoise():
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
 
 # Classic Control - Continuous State and Action Spaces
-env = gym.make('Pendulum-v0') # continuous only
-#env = gym.make('MountainCarContinuous-v0') # continuous only
+#env = gym.make('Pendulum-v0') # continuous only
+env = gym.make('MountainCarContinuous-v0') # continuous only
 
 # Box 2D
 #env = gym.make('BipedalWalker-v2') # continuous only
@@ -81,6 +81,7 @@ with open(file_output, 'w') as csvfile:
 #            env.render()
 
             # exploration policy
+            # TDOO put inside agent.act
             if i_episode < max_explore_eps:
                 p = i_episode/max_explore_eps
                 action = action*p + (1-p)*next(noise) # Only a fraction of the action's value gets perturbed
@@ -90,8 +91,9 @@ with open(file_output, 'w') as csvfile:
             # 'MountainCarContinuous-v0' environment is increased in 
             # size according to the action_repeat parameter's value.
             next_state = np.concatenate([next_state] * action_repeat) 
-            total_reward += reward
             agent.step(action, reward, next_state, done)
+
+            total_reward += reward
             
             # Save agent's rewards earned during each timestep of each episode 
             # of the simulation to the CSV file.
