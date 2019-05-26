@@ -32,8 +32,8 @@ def OUNoise():
 #env = gym.make('Taxi-v2') # discrete state and action space
 
 #env = gym.make('Pendulum-v0') # continuous only
-#env = gym.make('MountainCarContinuous-v0') # continuous only
-env = gym.make('BipedalWalker-v2') # continuous only
+env = gym.make('MountainCarContinuous-v0') # continuous only
+#env = gym.make('BipedalWalker-v2') # continuous only
 
 
 # Initialize the simulation
@@ -106,6 +106,13 @@ with open(file_output, 'w') as csvfile:
             else:
                 state = next_state
 
+
+
+
+"""
+# Exit Environment
+"""
+env.close()
 
 # Load simulation results from the .csv file
 import pandas as pd

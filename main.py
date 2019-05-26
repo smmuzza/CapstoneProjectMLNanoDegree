@@ -28,13 +28,13 @@ TODO
 """
 
 # Create an environment and set random seed
-#env = gym.make('MountainCar-v0') # needs Discretized or better
+env = gym.make('MountainCar-v0') # needs Discretized or better
 #env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
 #env = gym.make('Taxi-v2') # discrete state and action space
 
 #env = gym.make('Pendulum-v0') # continuous only
-env = gym.make('MountainCarContinuous-v0') # continuous only
+#env = gym.make('MountainCarContinuous-v0') # continuous only
 
 env.seed(505);
 
@@ -49,16 +49,16 @@ examine_environment(env)
 state_size0 = env.observation_space.shape
 action_size = env.action_space.n
 print("env.observation_space.shape[0]", state_size0)
-print("env.observation_space.shape[1]", state_size1)
+#print("env.observation_space.shape[1]", state_size1)
 print("env.action_space", action_size)
 
 """
 # create the agent discretized state space Q Learning
 """
-#from agents import discretize as dis
-#from agents import QLearningAgentDiscretized as qlad
-#state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
-#agent = qlad.QLearningAgent(env, state_grid)
+from agents import discretize as dis
+from agents import QLearningAgentDiscretized as qlad
+state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
+agent = qlad.QLearningAgent(env, state_grid)
 
 """
 # create the agent for tiled state space Q Learning
@@ -243,8 +243,8 @@ print("env.action_space", action_size)
 """
 # create a DDPG agent
 """
-from agents.DDPG import DDPG
-agent = DDPG(env)
+#from agents.DDPG import DDPG
+#agent = DDPG(env)
 
 """
 # run the simulation
