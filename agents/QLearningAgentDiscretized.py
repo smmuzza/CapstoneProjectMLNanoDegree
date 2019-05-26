@@ -55,28 +55,60 @@ class QLearningAgent:
         """Reset exploration rate used when training."""
         self.epsilon = epsilon if epsilon is not None else self.initial_epsilon
 
-    def act(self, state, reward=None, done=None, mode='train'):
+    def act(self, state):
         """Pick next action and update internal Q table (when mode != 'test')."""
         state = self.preprocess_state(state)
-        if mode == 'test':
-            # Test mode: Simply produce an action
-            action = np.argmax(self.q_table[state])
+
+        # Exploration vs. exploitation
+        do_exploration = np.random.uniform(0, 1) < self.epsilon
+        if do_exploration:
+            # Pick a random action
+            action = np.random.randint(0, self.action_size)
         else:
-            # Train mode (default): Update Q table, pick next action
-            # Note: We update the Q table entry for the *last* (state, action) pair with current state, reward
-            self.q_table[self.last_state + (self.last_action,)] += self.alpha * \
-                (reward + self.gamma * max(self.q_table[state]) - self.q_table[self.last_state + (self.last_action,)])
+            # Pick the best action from Q table
+            action = np.argmax(self.q_table[state])
 
-            # Exploration vs. exploitation
-            do_exploration = np.random.uniform(0, 1) < self.epsilon
-            if do_exploration:
-                # Pick a random action
-                action = np.random.randint(0, self.action_size)
-            else:
-                # Pick the best action from Q table
-                action = np.argmax(self.q_table[state])
-
-        # Roll over current state, action for next step
-        self.last_state = state
+        # Roll over current action for next step
         self.last_action = action
         return action
+    
+    def learn(self, state, reward=None, done=None):
+        """Pick next action and update internal Q table (when mode != 'test')."""
+        state = self.preprocess_state(state)
+        # Train mode (default): Update Q table, pick next action
+        # Note: We update the Q table entry for the *last* (state, action) pair with current state, reward
+        self.q_table[self.last_state + (self.last_action,)] += self.alpha * \
+            (reward + self.gamma * max(self.q_table[state]) - self.q_table[self.last_state + (self.last_action,)])
+
+    def step(self, state):
+        """Pick next action and update internal Q table (when mode != 'test')."""
+        state = self.preprocess_state(state)
+        # Roll over current state, action for next step
+        self.last_state = state
+    
+
+#    def act(self, state, reward=None, done=None, mode='train'):
+#        """Pick next action and update internal Q table (when mode != 'test')."""
+#        state = self.preprocess_state(state)
+#        if mode == 'test':
+#            # Test mode: Simply produce an action
+#            action = np.argmax(self.q_table[state])
+#        else:
+#            # Train mode (default): Update Q table, pick next action
+#            # Note: We update the Q table entry for the *last* (state, action) pair with current state, reward
+#            self.q_table[self.last_state + (self.last_action,)] += self.alpha * \
+#                (reward + self.gamma * max(self.q_table[state]) - self.q_table[self.last_state + (self.last_action,)])
+#
+#            # Exploration vs. exploitation
+#            do_exploration = np.random.uniform(0, 1) < self.epsilon
+#            if do_exploration:
+#                # Pick a random action
+#                action = np.random.randint(0, self.action_size)
+#            else:
+#                # Pick the best action from Q table
+#                action = np.argmax(self.q_table[state])
+#
+#        # Roll over current state, action for next step
+#        self.last_state = state
+#        self.last_action = action
+#        return action

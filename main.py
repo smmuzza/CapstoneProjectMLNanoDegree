@@ -18,17 +18,19 @@ plt.style.use('ggplot')
 np.set_printoptions(precision=3, linewidth=120)
 
 
-
 """
 TODO
 
-1. try the idea of sleeping the network with a different memory buffer size
-2. try transfer learning between environments (batch norm to help?)
-3. try to generalize agents between different environments
+1. generalize different agents to handle different environments to compare them
+2. try the idea of sleeping the network with a different memory buffer size
+3. try transfer learning between environments (batch norm to help?)
+4. try to generalize agents between different environments
 
 """
 
+"""
 # Create an environment and set random seed
+"""
 
 # Toy Text - Discrete state and action space
 #env = gym.make('Taxi-v2') # discrete state and action space
@@ -49,8 +51,6 @@ env = gym.make('MountainCar-v0') # needs Discretized or better
 # Atari
 #env = gym.make('MsPacman-v0')
 
-
-
 # Initialize the simulation
 env.seed(505);
 env.reset()
@@ -66,193 +66,45 @@ print("env.observation_space.shape[0]", state_size)
 print("env.action_space", action_size)
 
 """
+# Create Agent
+"""
+
+"""
 # create the agent discretized state space Q Learning
 """
-#from agents import discretize as dis
-#from agents import QLearningAgentDiscretized as qlad
-#state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
-#agent = qlad.QLearningAgent(env, state_grid)
+from agents import discretize as dis
+from agents import QLearningAgentDiscretized as qlad
+state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
+agent = qlad.QLearningAgent(env, state_grid)
+
+##examine_environment_MountainCar_discretized(env)
 
 """
 # create the agent for tiled state space Q Learning
 """
-from agents import QLearningAgentDiscretizedTiles as qlat
-n_bins = 20
-bins = tuple([n_bins]*env.observation_space.shape[0])
-offset_pos = (env.observation_space.high - env.observation_space.low)/(3*n_bins)
-
-tiling_specs = [(bins, -offset_pos),
-                (bins, tuple([0.0]*env.observation_space.shape[0])),
-                (bins, offset_pos)]
-
-tq = qlat.TiledQTable(env.observation_space.low, 
-                 env.observation_space.high, 
-                 tiling_specs, 
-                 env.action_space.n)
-agent = qlat.QLearningAgentDisTiles(env, tq)
+#from agents import QLearningAgentDiscretizedTiles as qlat
+#n_bins = 20
+#bins = tuple([n_bins]*env.observation_space.shape[0])
+#offset_pos = (env.observation_space.high - env.observation_space.low)/(3*n_bins)
+#
+#tiling_specs = [(bins, -offset_pos),
+#                (bins, tuple([0.0]*env.observation_space.shape[0])),
+#                (bins, offset_pos)]
+#
+#tq = qlat.TiledQTable(env.observation_space.low, 
+#                 env.observation_space.high, 
+#                 tiling_specs, 
+#                 env.action_space.n)
+#agent = qlat.QLearningAgentDisTiles(env, tq)
 
 
 # Specialized enviroment examination
-#examine_environment_MountainCar_discretized(env)
 #examine_environment_Acrobat_tiled(env, n_bins)
 
 """
 # Create Q network agent
 """
-#from agents import QNetwork as qnet
-#import tensorflow as tf
-#if 'session' in locals() and session is not None:
-#    print('Close interactive session')
-#    session.close()
-#   
-## Setup GPU TF stability
-#import tensorflow as tf
-#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
-#sess = tf.Session(config=tf.ConfigProto(
-#  allow_soft_placement=True, log_device_placement=True))
-#    
-#tf.reset_default_graph()
-#
-#
-#agent = qnet.QNetwork(name='main', state_size=state_size, action_size=action_size)
-#
-## Take one random step to get the pole and cart moving
-#state, reward, done, _ = env.step(env.action_space.sample())
-#
-#
-## Now train with experiences
-#train_episodes = 1000          # max number of episodes to learn from
-#max_steps = 200                # max steps in an episode
-#gamma = 0.99                   # future reward discount
-#
-#saver = tf.train.Saver()
-#rewards_list = []
-#with tf.Session() as sess:
-#    # Initialize variables
-#    sess.run(tf.global_variables_initializer())
-#    
-#    step = 0
-#    for ep in range(1, train_episodes):
-#        total_reward = 0
-#        t = 0
-#        while t < max_steps:
-#            step += 1
-#            # Uncomment this next line to watch the training
-##            env.render() 
-#            
-#            # Explore or Exploit
-#            # Exploration parameters
-#            explore_start = 1.0            # exploration probability at start
-#            explore_stop = 0.01            # minimum exploration probability 
-#            decay_rate = 0.0001            # exponential decay rate for exploration prob
-#            explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*step) 
-#            if explore_p > np.random.rand():
-#                # Make a random action
-#                action = env.action_space.sample()
-#            else:
-#                # Get action from Q-network
-#                feed = {agent.inputs_: state.reshape((1, *state.shape))}
-#                Qs = sess.run(agent.output, feed_dict=feed)
-#                action = np.argmax(Qs)
-#            
-#            # Take action, get new state and reward
-#            next_state, reward, done, _ = env.step(action)
-#    
-#            total_reward += reward
-#            
-#            if done:
-#                # the episode ends so no next state
-#                next_state = np.zeros(state.shape)
-#                t = max_steps
-#                
-#                if ep > agent.pretrain_length:
-#                    print('Episode: {}'.format(ep),
-#                          'Total reward: {}'.format(total_reward),
-#                          'Training loss: {:.4f}'.format(loss),
-#                          'Explore P: {:.4f}'.format(explore_p))
-#                else:
-#                    print('Episode: {}'.format(ep),
-#                          'Total reward: {}'.format(total_reward),
-#                          'Explore P: {:.4f}'.format(explore_p))
-#
-#                rewards_list.append((ep, total_reward))
-#                
-#                # Add experience to memory
-#                agent.memory.add((state, action, reward, next_state))
-#                
-#                # Start new episode
-#                env.reset()
-#                # Take one random step to get the pole and cart moving
-#                state, reward, done, _ = env.step(env.action_space.sample())
-#
-#            else:
-#                # Add experience to memory
-#                agent.memory.add((state, action, reward, next_state))
-#                state = next_state
-#                t += 1
-#            
-#
-#            # TODO check min memory size here? If big enough, train
-#            if ep > agent.pretrain_length:
-#                # Sample mini-batch from memory
-#                batch = agent.memory.sample(agent.batch_size)
-#                states = np.array([each[0] for each in batch])
-#                actions = np.array([each[1] for each in batch])
-#                rewards = np.array([each[2] for each in batch])
-#                next_states = np.array([each[3] for each in batch])
-#                
-#                # Train network
-#                target_Qs = sess.run(agent.output, feed_dict={agent.inputs_: next_states})
-#                
-#                # Set target_Qs to 0 for states where episode ends
-#                episode_ends = (next_states == np.zeros(states[0].shape)).all(axis=1)
-#                target_Qs[episode_ends] = 0#(0, 0) # CartPole-v1
-##                target_Qs[episode_ends] = (0, 0)  # MountainCar-v0
-#                
-#                targets = rewards + gamma * np.max(target_Qs, axis=1)
-#    
-#                loss, _ = sess.run([agent.loss, agent.opt],
-#                                    feed_dict={agent.inputs_: states,
-#                                               agent.targetQs_: targets,
-#                                               agent.actions_: actions})
-#        
-#    saver.save(sess, "checkpoints/cartpole.ckpt")
-#    
-#    # Watch Agent
-#    state = env.reset()
-#    score = 0
-#    for t in range(3000):       
-#        # Get action from Q-network
-#        feed = {agent.inputs_: state.reshape((1, *state.shape))}
-#        Qs = sess.run(agent.output, feed_dict=feed)
-#        action = np.argmax(Qs)
-#        
-#        # show environment and step it forward
-#        env.render()
-#        state, reward, done, _ = env.step(action)
-#        score += reward
-#        if done:
-#            break 
-#    print('Final score:', score)
-#    
-#    """
-#    # Exit Environment
-#    """
-#    env.close()  
-#
-#
-#import matplotlib.pyplot as plt
-#
-#def running_mean(x, N):
-#    cumsum = np.cumsum(np.insert(x, 0, 0)) 
-#    return (cumsum[N:] - cumsum[:-N]) / N 
-#
-#eps, rews = np.array(rewards_list).T
-#smoothed_rews = running_mean(rews, 10)
-#plt.plot(eps[-len(smoothed_rews):], smoothed_rews)
-#plt.plot(eps, rews, color='grey', alpha=0.3)
-#plt.xlabel('Episode')
-#plt.ylabel('Total Reward')
+
 
 
 """

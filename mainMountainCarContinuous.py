@@ -24,11 +24,13 @@ def OUNoise():
 
 # Setup
 
+# Toy Text - Discrete state and action space
+#env = gym.make('Taxi-v2') # discrete state and action space
+
 # Classic Control - Continuous State and Discrete Action Spaces
 #env = gym.make('MountainCar-v0') # needs Discretized or better
 #env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
-#env = gym.make('Taxi-v2') # discrete state and action space
 
 # Classic Control - Continuous State and Action Spaces
 env = gym.make('Pendulum-v0') # continuous only
