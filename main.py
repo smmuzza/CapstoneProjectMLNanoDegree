@@ -261,7 +261,7 @@ agent = qlat.QLearningAgentDisTiles(env, tq)
 import run as sim
 num_episodes=25000
 score = 0
-scores = sim.run(agent, env, num_episodes)
+scores = sim.run(agent, env, num_episodes, mode='train')
 
 """
 # Plot scores obtained per episode
@@ -285,7 +285,7 @@ state = env.reset()
 score = 0
 for t in range(5000):
     # get action from agent
-    action = agent.act(state, mode='test')
+    action = agent.act(state)
        
     # show environment and step it forward
     env.render()

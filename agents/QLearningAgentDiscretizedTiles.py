@@ -139,36 +139,40 @@ class QLearningAgentDisTiles:
         self.last_state = state
         Q_s = [self.tq.get(state, action) for action in range(self.action_size)]
         self.last_action = np.argmax(Q_s)
-        return self.last_action
     
     def reset_exploration(self, epsilon=None):
         """Reset exploration rate used when training."""
         self.epsilon = epsilon if epsilon is not None else self.initial_epsilon
 
-    def act(self, state, reward=None, done=None, mode='train'):
-        """Pick next action and update internal Q table (when mode != 'test')."""
+    def act(self, state):
+        """Pick next action """
         Q_s = [self.tq.get(state, action) for action in range(self.action_size)]
         # Pick the best action from Q table
         greedy_action = np.argmax(Q_s)
-        if mode == 'test':
-            # Test mode: Simply produce an action
-            action = greedy_action
-        else:
-            # Train mode (default): Update Q table, pick next action
-            # Note: We update the Q table entry for the *last* (state, action) pair with current state, reward
-            value = reward + self.gamma * max(Q_s)
-            self.tq.update(self.last_state, self.last_action, value, self.alpha)
 
-            # Exploration vs. exploitation
-            do_exploration = np.random.uniform(0, 1) < self.epsilon
-            if do_exploration:
-                # Pick a random action
-                action = np.random.randint(0, self.action_size)
-            else:
-                # Pick the greedy action
-                action = greedy_action
+        # Exploration vs. exploitation
+        do_exploration = np.random.uniform(0, 1) < self.epsilon
+        if do_exploration:
+            # Pick a random action
+            action = np.random.randint(0, self.action_size)
+        else:
+            # Pick the greedy action
+            action = greedy_action
 
         # Roll over current state, action for next step
-        self.last_state = state
         self.last_action = action
         return action
+
+    def learn(self, state, reward):
+        """Pick next action and update internal Q table (when mode != 'test')."""
+        Q_s = [self.tq.get(state, action) for action in range(self.action_size)]
+
+        # Train mode (default): Update Q table, pick next action
+        # Note: We update the Q table entry for the *last* (state, action) pair with current state, reward
+        value = reward + self.gamma * max(Q_s)
+        self.tq.update(self.last_state, self.last_action, value, self.alpha)
+
+    def step(self, state):
+        # Roll over current state, action for next step
+        self.last_state = state
+        
