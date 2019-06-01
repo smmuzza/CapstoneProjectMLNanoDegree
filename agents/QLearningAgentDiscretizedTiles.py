@@ -110,9 +110,23 @@ class TiledQTable:
 class QLearningAgentDisTiles:
     """Q-Learning agent that can act on a continuous state space by discretizing it."""
 
-    def __init__(self, env, tq, alpha=0.02, gamma=0.99,
+    def __init__(self, env, alpha=0.02, gamma=0.99,
                  epsilon=1.0, epsilon_decay_rate=0.9995, min_epsilon=.01, seed=0):
+        
         """Initialize variables, create grid for discretization."""
+        n_bins = 20
+        bins = tuple([n_bins]*env.observation_space.shape[0])
+        offset_pos = (env.observation_space.high - env.observation_space.low)/(3*n_bins)
+
+        tiling_specs = [(bins, -offset_pos),
+                (bins, tuple([0.0]*env.observation_space.shape[0])),
+                (bins, offset_pos)]
+
+        tq = TiledQTable(env.observation_space.low, 
+                 env.observation_space.high, 
+                 tiling_specs, 
+                 env.action_space.n)
+        
         # Environment info
         self.env = env
         self.tq = tq 

@@ -37,7 +37,7 @@ TODO
 
 # Classic Control - Continuous State and Discrete Action Spaces
 env = gym.make('MountainCar-v0') # needs Discretized or better
-#env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
+#env = gym.make('Acrobot-v1')     # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
 
 # Classic Control - Continuous State and Action Spaces
@@ -72,33 +72,15 @@ print("env.action_space", action_size)
 """
 # create the agent discretized state space Q Learning
 """
-from agents import discretize as dis
-from agents import QLearningAgentDiscretized as qlad
-state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
-agent = qlad.QLearningAgent(env, state_grid)
-
-##examine_environment_MountainCar_discretized(env)
+#from agents import QLearningAgentDiscretized as qlad
+#agent = qlad.QLearningAgent(env)
+#examine_environment_MountainCar_discretized(env)
 
 """
 # create the agent for tiled state space Q Learning
 """
-#from agents import QLearningAgentDiscretizedTiles as qlat
-#n_bins = 20
-#bins = tuple([n_bins]*env.observation_space.shape[0])
-#offset_pos = (env.observation_space.high - env.observation_space.low)/(3*n_bins)
-#
-#tiling_specs = [(bins, -offset_pos),
-#                (bins, tuple([0.0]*env.observation_space.shape[0])),
-#                (bins, offset_pos)]
-#
-#tq = qlat.TiledQTable(env.observation_space.low, 
-#                 env.observation_space.high, 
-#                 tiling_specs, 
-#                 env.action_space.n)
-#agent = qlat.QLearningAgentDisTiles(env, tq)
-
-
-# Specialized enviroment examination
+from agents import QLearningAgentDiscretizedTiles as qlat
+agent = qlat.QLearningAgentDisTiles(env)
 #examine_environment_Acrobat_tiled(env, n_bins)
 
 """
@@ -111,7 +93,7 @@ agent = qlad.QLearningAgent(env, state_grid)
 # run the simulation
 """
 import run as sim
-num_episodes=25000
+num_episodes=20000
 score = 0
 scores = sim.run(agent, env, num_episodes, mode='train')
 

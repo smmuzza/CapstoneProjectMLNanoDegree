@@ -22,6 +22,15 @@ class OUNoise:
         self.state = x + dx
         return self.state
     
+##OU Noise method for this task
+#def OUNoise():
+#    theta = 0.15
+#    sigma = 0.2
+#    state = 0
+#    while True:
+#        yield state
+#        state += -theta*state+sigma*np.random.randn()
+
 
 import random
 from collections import namedtuple, deque
@@ -269,6 +278,15 @@ class DDPG():
         # Algorithm parameters
         self.gamma = 0.99  # discount factor
         self.tau = 0.001   # for soft update of target parameters
+        
+        # Exploration Policy
+                # Noise process (should be in units of RPMs for each rotor)
+        self.exploration_mu = 0       # original 0
+        self.exploration_theta = 0.15 # original 0.15
+        self.exploration_sigma = 0.2  # oringal 0.2
+        self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
+        self.i_episode = 0
+        self.max_explore_eps = 100 # duration of exploration phase using OU noise
 
     def reset_episode(self):
         state = self.task.reset()
@@ -292,11 +310,20 @@ class DDPG():
 
         # Roll over last state and action
         self.last_state = next_state
-
+        
+        # increase episode counter
+        self.i_episode += 1
+        
     def act(self, state):
         """Returns action(s) for given state(s) as per current policy."""
         state = np.reshape(state, [-1, self.state_size])
         action = self.actor_local.model.predict(state)[0]
+        
+        # exploration policy
+        if self.i_episode < self.max_explore_eps:
+            p = self.i_episode/self.max_explore_eps
+            action = action*p + (1-p)*(self.noise.sample()) # Only a fraction of the action's value gets perturbed
+        
         return action # OU noise will be added outside the agent's class
 
     def learn(self, experiences):

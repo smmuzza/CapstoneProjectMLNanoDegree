@@ -11,11 +11,12 @@ from agents import discretize as dis
 class QLearningAgent:
     """Q-Learning agent that can act on a continuous state space by discretizing it."""
 
-    def __init__(self, env, state_grid, alpha=0.02, gamma=0.99,
+    def __init__(self, env, alpha=0.02, gamma=0.99,
                  epsilon=1.0, epsilon_decay_rate=0.9995, min_epsilon=.01, seed=505):
         """Initialize variables, create grid for discretization."""
         # Environment info
         self.env = env
+        state_grid = dis.create_uniform_grid(env.observation_space.low, env.observation_space.high, bins=(20, 20))
         self.state_grid = state_grid
         self.state_size = tuple(len(splits) + 1 for splits in self.state_grid)  # n-dimensional state space
         self.action_size = self.env.action_space.n  # 1-dimensional discrete action space

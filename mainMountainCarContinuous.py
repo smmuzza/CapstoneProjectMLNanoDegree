@@ -51,14 +51,13 @@ state = env.reset()
 
 # Examine the environment
 from visuals import examine_environment, examine_environment_MountainCar_discretized, examine_environment_Acrobat_tiled
-examine_environment(env)
+#examine_environment(env)
 
 agent = DDPG(env)
 action_repeat = 3                               # my DDPG implementation uses action_repeat
 num_episodes = 200
 rewards_list = []                               # store the total rewards earned for each episode
 best_reward = -np.inf                           # keep track of the best reward across episodes
-max_explore_eps = 100                           # duration of exploration phase using OU noise
 episode_steps = 0
 noise = OUNoise()
 
@@ -79,12 +78,6 @@ with open(file_output, 'w') as csvfile:
             action = agent.act(state)
             
 #            env.render()
-
-            # exploration policy
-            # TDOO put inside agent.act
-            if i_episode < max_explore_eps:
-                p = i_episode/max_explore_eps
-                action = action*p + (1-p)*next(noise) # Only a fraction of the action's value gets perturbed
             
             next_state, reward, done, _ = env.step(action)
             # Ensure that size of next_state as returned from the 
