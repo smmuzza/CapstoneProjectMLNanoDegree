@@ -34,11 +34,12 @@ def OUNoise():
 
 # Classic Control - Continuous State and Action Spaces
 #env = gym.make('Pendulum-v0') # continuous only
-env = gym.make('MountainCarContinuous-v0') # continuous only
+#env = gym.make('MountainCarContinuous-v0') # continuous only
 
 # Box 2D
-#env = gym.make('BipedalWalker-v2') # continuous only
-#env = gym.make('CarRacing-v0')      # make the environment
+env = gym.make('BipedalWalker-v2') # continuous only
+#env = gym.make('LunarLanderContinuous-v2')
+#env = gym.make('CarRacing-v0')      # needs some agent customization
 
 # Atari
 #env = gym.make('MsPacman-v0')
@@ -54,8 +55,8 @@ from visuals import examine_environment, examine_environment_MountainCar_discret
 #examine_environment(env)
 
 agent = DDPG(env)
-action_repeat = 3                               # my DDPG implementation uses action_repeat
-num_episodes = 200
+action_repeat = 3   # put inside agent
+num_episodes = 1000
 rewards_list = []                               # store the total rewards earned for each episode
 best_reward = -np.inf                           # keep track of the best reward across episodes
 episode_steps = 0
@@ -90,28 +91,28 @@ with open(file_output, 'w') as csvfile:
             step += 1
 
             action = agent.act(state)
-            
-#            env.render()
-            
+                       
             # exploration policy
             # TDOO put inside agent.act
-#            if i_episode < max_explore_eps:
-#                p = i_episode/max_explore_eps
-#                nextNoise = next(noise)
-#                action = action*p + (1-p)*nextNoise # Only a fraction of the action's value gets perturbed
+            if i_episode < max_explore_eps:
+                p = i_episode/max_explore_eps
+                nextNoise = next(noise)
+                action = action*p + (1-p)*nextNoise # Only a fraction of the action's value gets perturbed
 
-            # Explore or Exploit
-            explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*step) 
-            if explore_p > np.random.rand():
-                # Make a random action
-                action = env.action_space.sample()
-                
-                # use a fraction of the explore p to randomly sample
-                # this approach uses the network as momentum instead of 
-                # simply using completely random actions    
-#                action = explore_p * env.action_space.sample() + (1 - explore_p) * agent.act(state)
-            else:
-                action = agent.act(state)
+#            # Explore or Exploit
+#            explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*step) 
+#            if explore_p > np.random.rand():
+#                # Make a random action
+#                action = env.action_space.sample()
+#                
+#                # use a fraction of the explore p to randomly sample
+#                # this approach uses the network as momentum instead of 
+#                # simply using completely random actions    
+##                action = explore_p * env.action_space.sample() + (1 - explore_p) * agent.act(state)
+#            else:
+#                action = agent.act(state)
+
+#            env.render()
 
             next_state, reward, done, _ = env.step(action)
             # Ensure that size of next_state as returned from the 
@@ -182,7 +183,7 @@ plt.plot(episode_rewards_sum, label='sum rewards')
 plt.plot(smoothed_sum, label='running mean')
 plt.legend()
 axes = plt.gca()
-axes.set_ylim([-100,100])
+axes.set_ylim([-150,150])
 plt.show()  
 
 
