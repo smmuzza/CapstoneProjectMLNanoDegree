@@ -59,7 +59,15 @@ num_episodes = 200
 rewards_list = []                               # store the total rewards earned for each episode
 best_reward = -np.inf                           # keep track of the best reward across episodes
 episode_steps = 0
+
+# Exploration parameters
+explore_p = 1.0
+explore_start = 1.0            # exploration probability at start
+explore_stop = 0.01            # minimum exploration probability 
+decay_rate = 0.00001            # exponential decay rate for exploration prob
+
 noise = OUNoise()
+max_explore_eps = 100 # duration of exploration phase using OU noise
 
 # In order to save the simulation's reward results to a CSV file.
 file_output = 'ddpg_agent_mountain_car_continuous_data.txt'       # file name for saved results
@@ -72,13 +80,39 @@ with open(file_output, 'w') as csvfile:
     # Begin the simulation by starting a new episode
     state = agent.reset_episode() 
     # Run the simulation for each episode.
+    
+    step = 0
     for i_episode in range(1, num_episodes+1):
         total_reward = 0
+        print("starting episode explore_p: ", explore_p)
+
         while True:
+            step += 1
+
             action = agent.act(state)
             
 #            env.render()
             
+            # exploration policy
+            # TDOO put inside agent.act
+#            if i_episode < max_explore_eps:
+#                p = i_episode/max_explore_eps
+#                nextNoise = next(noise)
+#                action = action*p + (1-p)*nextNoise # Only a fraction of the action's value gets perturbed
+
+            # Explore or Exploit
+            explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*step) 
+            if explore_p > np.random.rand():
+                # Make a random action
+                action = env.action_space.sample()
+                
+                # use a fraction of the explore p to randomly sample
+                # this approach uses the network as momentum instead of 
+                # simply using completely random actions    
+#                action = explore_p * env.action_space.sample() + (1 - explore_p) * agent.act(state)
+            else:
+                action = agent.act(state)
+
             next_state, reward, done, _ = env.step(action)
             # Ensure that size of next_state as returned from the 
             # 'MountainCarContinuous-v0' environment is increased in 

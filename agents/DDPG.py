@@ -320,9 +320,9 @@ class DDPG():
         action = self.actor_local.model.predict(state)[0]
         
         # exploration policy
-        if self.i_episode < self.max_explore_eps:
-            p = self.i_episode/self.max_explore_eps
-            action = action*p + (1-p)*(self.noise.sample()) # Only a fraction of the action's value gets perturbed
+#        if self.i_episode < self.max_explore_eps:
+#            p = self.i_episode/self.max_explore_eps
+#            action = action*p + (1-p)*(self.noise.sample()) # Only a fraction of the action's value gets perturbed
         
         return action # OU noise will be added outside the agent's class
 
