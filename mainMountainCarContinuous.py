@@ -13,15 +13,6 @@ import sys
 #from gym import envs
 #print(envs.registry.all())
 
-#OU Noise method for this task
-def OUNoise():
-    theta = 0.15
-    sigma = 0.2
-    state = 0
-    while True:
-        yield state
-        state += -theta*state+sigma*np.random.randn()
-
 # Setup
 
 # Toy Text - Discrete state and action space
@@ -60,9 +51,6 @@ num_episodes = 200
 rewards_list = []                               # store the total rewards earned for each episode
 best_reward = -np.inf                           # keep track of the best reward across episodes
 episode_steps = 0
-
-noise = OUNoise()
-max_explore_eps = 100 # duration of exploration phase using OU noise
 
 # In order to save the simulation's reward results to a CSV file.
 file_output = 'ddpg_agent_mountain_car_continuous_data.txt'       # file name for saved results
