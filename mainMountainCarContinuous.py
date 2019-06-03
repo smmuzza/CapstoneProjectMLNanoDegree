@@ -60,13 +60,12 @@ labels = ['episode', 'timestep', 'reward']
 with open(file_output, 'w') as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(labels)
-    # Begin the simulation by starting a new episode
-    state = agent.reset_episode() 
-    # Run the simulation for each episode.
     
     step = 0
     for i_episode in range(1, num_episodes+1):
         total_reward = 0
+        # Begin the simulation by starting a new episode
+        state = agent.reset_episode() # start a new episode
 
         while True:
             step += 1
@@ -99,13 +98,8 @@ with open(file_output, 'w') as csvfile:
                 print("\rEpisode = {:4d} (duration of {} steps); Reward = {:7.3f} (best reward = {:7.3f}, in episode {})   ".format(
                     i_episode, episode_steps, total_reward, best_reward, best_episode), end="")  # [debug]
                 sys.stdout.flush()
-                state = agent.reset_episode() # start a new episode
                 episode_steps = 0 # Reset for the new episode
                 break
-#            else:
-#                state = next_state
-#                #make this agent.reset_episode, so can put action repeat inside
-
 
 
 
