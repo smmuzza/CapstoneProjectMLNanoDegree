@@ -75,12 +75,12 @@ with open(file_output, 'w') as csvfile:
 
 #            env.render()
 
-            next_state, reward, done, _ = env.step(action)
+            state, reward, done, _ = env.step(action)
             # Ensure that size of next_state as returned from the 
             # 'MountainCarContinuous-v0' environment is increased in 
             # size according to the action_repeat parameter's value.
-            next_state = np.concatenate([next_state] * action_repeat) 
-            agent.step(action, reward, next_state, done)
+            state = np.concatenate([state] * action_repeat) 
+            agent.step(action, reward, state, done)
 
             total_reward += reward
             
@@ -102,9 +102,9 @@ with open(file_output, 'w') as csvfile:
                 state = agent.reset_episode() # start a new episode
                 episode_steps = 0 # Reset for the new episode
                 break
-            else:
-                state = next_state
-                #make this agent.reset_episode, so can put action repeat inside
+#            else:
+#                state = next_state
+#                #make this agent.reset_episode, so can put action repeat inside
 
 
 
