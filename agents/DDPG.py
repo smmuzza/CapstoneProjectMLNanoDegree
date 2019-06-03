@@ -291,8 +291,8 @@ class DDPG():
         self.stepCount = 0
         self.explore_p = 1.0
 
-    def reset_episode(self):
-        state = self.task.reset()
+    def reset_episode(self, state):
+#        state = self.task.reset()
         
         # Since the task is OpenAi Gym 'MountainCarContinuous-v0' environment, 
         # we must expand the state returned from the gym environment according to 
@@ -309,6 +309,13 @@ class DDPG():
         return state
 
     def step(self, action, reward, next_state, done):
+        
+        # Ensure that size of next_state as returned from the 
+        # 'MountainCarContinuous-v0' environment is increased in 
+        # size according to the action_repeat parameter's value.
+        next_state = np.concatenate([next_state] * self.action_repeat) 
+
+        
          # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done)
 
@@ -324,7 +331,13 @@ class DDPG():
         self.last_state = next_state
                 
     def act(self, state):       
-                       
+                 
+        # Ensure that size of next_state as returned from the 
+        # 'MountainCarContinuous-v0' environment is increased in 
+        # size according to the action_repeat parameter's value.
+        state = np.concatenate([state] * self.action_repeat) 
+
+        
         # Exploration parameters
         explore_start = 1.0            # exploration probability at start
         explore_stop = 0.01            # minimum exploration probability 

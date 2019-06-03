@@ -36,13 +36,13 @@ TODO
 #env = gym.make('Taxi-v2') # discrete state and action space
 
 # Classic Control - Continuous State and Discrete Action Spaces
-env = gym.make('MountainCar-v0') # needs Discretized or better
+#env = gym.make('MountainCar-v0') # needs Discretized or better
 #env = gym.make('Acrobot-v1')     # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
 
 # Classic Control - Continuous State and Action Spaces
 #env = gym.make('Pendulum-v0') # continuous only
-#env = gym.make('MountainCarContinuous-v0') # continuous only
+env = gym.make('MountainCarContinuous-v0') # continuous only
 
 # Box 2D
 #env = gym.make('BipedalWalker-v2') # continuous only
@@ -60,10 +60,6 @@ state = env.reset()
 from visuals import examine_environment, examine_environment_MountainCar_discretized, examine_environment_Acrobat_tiled
 #examine_environment(env)
 
-state_size = env.observation_space.shape[0]
-action_size = env.action_space.n
-print("env.observation_space.shape[0]", state_size)
-print("env.action_space", action_size)
 
 """
 # Create Agent
@@ -79,21 +75,26 @@ print("env.action_space", action_size)
 """
 # create the agent for tiled state space Q Learning
 """
-from agents import QLearningAgentDiscretizedTiles as qlat
-agent = qlat.QLearningAgentDisTiles(env)
+#from agents import QLearningAgentDiscretizedTiles as qlat
+#agent = qlat.QLearningAgentDisTiles(env)
 #examine_environment_Acrobat_tiled(env, n_bins)
+#state_size = env.observation_space.shape[0]
+#action_size = env.action_space.n
+#print("env.observation_space.shape[0]", state_size)
+#print("env.action_space", action_size)
 
 """
-# Create Q network agent
+# Create DDPG network agent
 """
-
+from agents.DDPG import DDPG
+agent = DDPG(env)
 
 
 """
 # run the simulation
 """
 import run as sim
-num_episodes=20000
+num_episodes=200
 score = 0
 scores = sim.run(agent, env, num_episodes, mode='train')
 

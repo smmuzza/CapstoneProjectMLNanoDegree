@@ -30,7 +30,7 @@ env = gym.make('MountainCarContinuous-v0') # continuous only
 # Box 2D
 #env = gym.make('BipedalWalker-v2') # continuous only
 #env = gym.make('LunarLanderContinuous-v2')
-#env = gym.make('CarRacing-v0')      # needs some agent customization
+#env = gym.make('CarRacing-v0')      # pixel input, needs some agent customization
 
 # Atari
 #env = gym.make('MsPacman-v0')
@@ -65,7 +65,8 @@ with open(file_output, 'w') as csvfile:
     for i_episode in range(1, num_episodes+1):
         total_reward = 0
         # Begin the simulation by starting a new episode
-        state = agent.reset_episode() # start a new episode
+        state = env.reset()        # reset environment        
+        agent.reset_episode(state) # start a new episode
 
         while True:
             step += 1
@@ -75,10 +76,7 @@ with open(file_output, 'w') as csvfile:
 #            env.render()
 
             state, reward, done, _ = env.step(action)
-            # Ensure that size of next_state as returned from the 
-            # 'MountainCarContinuous-v0' environment is increased in 
-            # size according to the action_repeat parameter's value.
-            state = np.concatenate([state] * action_repeat) 
+
             agent.step(action, reward, state, done)
 
             total_reward += reward
