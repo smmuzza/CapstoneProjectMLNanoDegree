@@ -285,8 +285,11 @@ class DDPG():
         self.exploration_theta = 0.15 # original 0.15
         self.exploration_sigma = 0.2  # oringal 0.2
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
+        
         self.i_episode = 0
         self.max_explore_eps = 100 # duration of exploration phase using OU noise
+        self.stepCount = 0
+        self.explore_p = 1.0
 
     def reset_episode(self):
         state = self.task.reset()
@@ -297,6 +300,12 @@ class DDPG():
         state = np.concatenate([state] * self.action_repeat) 
         
         self.last_state = state
+        
+        # increase episode counter
+        self.i_episode += 1
+        
+        print("resetting episode... next explore_p: ", self.explore_p)
+        
         return state
 
     def step(self, action, reward, next_state, done):
@@ -308,23 +317,42 @@ class DDPG():
             experiences = self.memory.sample(self.batch_size)
             self.learn(experiences)
 
+        # increase step count
+        self.stepCount += 1
+
         # Roll over last state and action
         self.last_state = next_state
+                
+    def act(self, state):       
+                       
+        # Exploration parameters
+        explore_start = 1.0            # exploration probability at start
+        explore_stop = 0.01            # minimum exploration probability 
+        decay_rate = 0.00001            # exponential decay rate for exploration prob
+
+            # exploration policy
+            # TDOO put inside agent.act
+#            if i_episode < max_explore_eps:
+#                p = i_episode/max_explore_eps
+#                nextNoise = next(noise)
+#                action = action*p + (1-p)*nextNoise # Only a fraction of the action's value gets perturbed
+
+        # Explore or Exploit
+        self.explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*self.stepCount) 
+        if self.explore_p > np.random.rand():
+            # Make a random action
+            action = self.task.action_space.sample()
+            
+            # use a fraction of the explore p to randomly sample
+            # this approach uses the network as momentum instead of 
+            # simply using completely random actions    
+        #                action = explore_p * env.action_space.sample() + (1 - explore_p) * agent.act(state)
+        else:
+            """Returns action(s) for given state(s) as per current policy."""
+            state = np.reshape(state, [-1, self.state_size])
+            action = self.actor_local.model.predict(state)[0]
         
-        # increase episode counter
-        self.i_episode += 1
-        
-    def act(self, state):
-        """Returns action(s) for given state(s) as per current policy."""
-        state = np.reshape(state, [-1, self.state_size])
-        action = self.actor_local.model.predict(state)[0]
-        
-        # exploration policy
-#        if self.i_episode < self.max_explore_eps:
-#            p = self.i_episode/self.max_explore_eps
-#            action = action*p + (1-p)*(self.noise.sample()) # Only a fraction of the action's value gets perturbed
-        
-        return action # OU noise will be added outside the agent's class
+        return action
 
     def learn(self, experiences):
         """Update policy and value parameters using given batch of experience tuples."""
