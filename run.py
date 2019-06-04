@@ -10,13 +10,13 @@ import numpy as np
 def run(agent, env, num_episodes=20000, mode='train'):
     """Run agent in given reinforcement learning environment and return scores."""
     scores = []
-    episode_steps = 0
     best_reward = -np.inf                           # keep track of the best reward across episodes
 
     for i_episode in range(1, num_episodes+1):
         # Initialize episode
         state = env.reset()        # reset environment        
-        agent.reset_episode(state) # reset agent
+        agent.reset_episode(state) # reset agent      
+        episode_steps = 0 # Reset for the new episode
         episode_total_reward = 0   # total rewards per episode
         done = False
 
@@ -32,7 +32,7 @@ def run(agent, env, num_episodes=20000, mode='train'):
             state, reward, done, info = env.step(action)
             
             if mode == 'train':
-                agent.learn(state, reward) # TODO fix me
+                agent.learn(action, reward, state, done)
             
             agent.step(state)
 
