@@ -308,21 +308,12 @@ class DDPG():
         
         return state
 
-    def step(self, action, reward, next_state, done):
+    def step(self, next_state):
         
         # Ensure that size of next_state as returned from the 
         # 'MountainCarContinuous-v0' environment is increased in 
         # size according to the action_repeat parameter's value.
         next_state = np.concatenate([next_state] * self.action_repeat) 
-
-        
-         # Save experience / reward
-        self.memory.add(self.last_state, action, reward, next_state, done)
-
-        # Learn, if enough samples are available in memory
-        if len(self.memory) > self.batch_size*3:    # Warm up period is 3 times longer than typical
-            experiences = self.memory.sample(self.batch_size)
-            self.learn(experiences)
 
         # increase step count
         self.stepCount += 1
@@ -336,8 +327,7 @@ class DDPG():
         # 'MountainCarContinuous-v0' environment is increased in 
         # size according to the action_repeat parameter's value.
         state = np.concatenate([state] * self.action_repeat) 
-
-        
+       
         # Exploration parameters
         explore_start = 1.0            # exploration probability at start
         explore_stop = 0.01            # minimum exploration probability 
@@ -367,30 +357,44 @@ class DDPG():
         
         return action
 
-    def learn(self, experiences):
-        """Update policy and value parameters using given batch of experience tuples."""
-        # Convert experience tuples to separate arrays for each element (states, actions, rewards, etc.)
-        states = np.vstack([e.state for e in experiences if e is not None])
-        actions = np.array([e.action for e in experiences if e is not None]).astype(np.float32).reshape(-1, self.action_size)
-        rewards = np.array([e.reward for e in experiences if e is not None]).astype(np.float32).reshape(-1, 1)
-        dones = np.array([e.done for e in experiences if e is not None]).astype(np.uint8).reshape(-1, 1)
-        next_states = np.vstack([e.next_state for e in experiences if e is not None])
+    def learn(self, action, reward, next_state, done):
+        
+        # Ensure that size of next_state as returned from the 
+        # 'MountainCarContinuous-v0' environment is increased in 
+        # size according to the action_repeat parameter's value.
+        next_state = np.concatenate([next_state] * self.action_repeat) 
+        
+        # Save experience / reward
+        self.memory.add(self.last_state, action, reward, next_state, done)
 
-        # Get predicted next-state actions and Q values from target models
-        actions_next = self.actor_target.model.predict_on_batch(next_states)
-        Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
-
-        # Compute Q targets for current states and train critic model (local)
-        Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-        self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
-
-        # Train actor model (local)
-        action_gradients = np.reshape(self.critic_local.get_action_gradients([states, actions, 0]), (-1, self.action_size))
-        self.actor_local.train_fn([states, action_gradients, 1])  # custom training function
-
-        # Soft-update target models
-        self.soft_update(self.critic_local.model, self.critic_target.model)
-        self.soft_update(self.actor_local.model, self.actor_target.model)   
+        # Learn, if enough samples are available in memory
+        if len(self.memory) > self.batch_size*3:    # Warm up period is 3 times longer than typical
+            experiences = self.memory.sample(self.batch_size)
+#            self.learn(experiences)
+        
+            """Update policy and value parameters using given batch of experience tuples."""
+            # Convert experience tuples to separate arrays for each element (states, actions, rewards, etc.)
+            states = np.vstack([e.state for e in experiences if e is not None])
+            actions = np.array([e.action for e in experiences if e is not None]).astype(np.float32).reshape(-1, self.action_size)
+            rewards = np.array([e.reward for e in experiences if e is not None]).astype(np.float32).reshape(-1, 1)
+            dones = np.array([e.done for e in experiences if e is not None]).astype(np.uint8).reshape(-1, 1)
+            next_states = np.vstack([e.next_state for e in experiences if e is not None])
+    
+            # Get predicted next-state actions and Q values from target models
+            actions_next = self.actor_target.model.predict_on_batch(next_states)
+            Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
+    
+            # Compute Q targets for current states and train critic model (local)
+            Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
+            self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
+    
+            # Train actor model (local)
+            action_gradients = np.reshape(self.critic_local.get_action_gradients([states, actions, 0]), (-1, self.action_size))
+            self.actor_local.train_fn([states, action_gradients, 1])  # custom training function
+    
+            # Soft-update target models
+            self.soft_update(self.critic_local.model, self.critic_target.model)
+            self.soft_update(self.actor_local.model, self.actor_target.model)   
 
     def soft_update(self, local_model, target_model):
         """Soft update model parameters."""

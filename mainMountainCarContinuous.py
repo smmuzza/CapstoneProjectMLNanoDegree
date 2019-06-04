@@ -77,7 +77,8 @@ with open(file_output, 'w') as csvfile:
 
             state, reward, done, _ = env.step(action)
 
-            agent.step(action, reward, state, done)
+            agent.learn(action, reward, state, done)
+            agent.step(state)
 
             total_reward += reward
             
