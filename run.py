@@ -28,6 +28,8 @@ def run(agent, env, num_episodes=20000, mode='train'):
             # 3. (training mode) learn from environment feedback 
             #    (new state, reward, done) to agent
             # 4. step the agent (forward with the new state)
+            
+#            env.render()
             action = agent.act(state)
             state, reward, done, info = env.step(action)
             

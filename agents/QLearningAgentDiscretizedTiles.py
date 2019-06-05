@@ -177,7 +177,7 @@ class QLearningAgentDisTiles:
         self.last_action = action
         return action
 
-    def learn(self, state, reward):
+    def learn(self, action, reward, state, done):
         """Pick next action and update internal Q table (when mode != 'test')."""
         Q_s = [self.tq.get(state, action) for action in range(self.action_size)]
 

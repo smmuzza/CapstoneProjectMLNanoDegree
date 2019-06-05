@@ -26,6 +26,9 @@ TODO
 3. try transfer learning between environments (batch norm to help?)
 4. try to generalize agents between different environments
 
+MountainCarContinuous-v0 usually solves within 100-200 episodes
+
+
 """
 
 """
@@ -44,8 +47,9 @@ TODO
 #env = gym.make('Pendulum-v0') # continuous only
 env = gym.make('MountainCarContinuous-v0') # continuous only
 
-# Box 2D
-#env = gym.make('BipedalWalker-v2') # continuous only
+# Box 2D - Continuous State and Action Spaces
+#env = gym.make('BipedalWalker-v2')  # continuous only
+#env = gym.make('LunarLanderContinuous-v2') # continuous only
 #env = gym.make('CarRacing-v0')      # make the environment
 
 # Atari
@@ -64,30 +68,28 @@ from visuals import examine_environment, examine_environment_MountainCar_discret
 """
 # Create Agent
 """
+agent = 0
+selectedAgent = 2
+if selectedAgent == 0:
+    # create the agent discretized state space Q Learning
+    from agents import QLearningAgentDiscretized as qlad
+    agent = qlad.QLearningAgent(env)
+    examine_environment_MountainCar_discretized(env)
 
-"""
-# create the agent discretized state space Q Learning
-"""
-#from agents import QLearningAgentDiscretized as qlad
-#agent = qlad.QLearningAgent(env)
-#examine_environment_MountainCar_discretized(env)
+if selectedAgent == 1:
+    # create the agent for tiled state space Q Learning
+    from agents import QLearningAgentDiscretizedTiles as qlat
+    agent = qlat.QLearningAgentDisTiles(env)
+    #examine_environment_Acrobat_tiled(env, n_bins)
+    state_size = env.observation_space.shape[0]
+    action_size = env.action_space.n
+    print("env.observation_space.shape[0]", state_size)
+    print("env.action_space", action_size)
 
-"""
-# create the agent for tiled state space Q Learning
-"""
-#from agents import QLearningAgentDiscretizedTiles as qlat
-#agent = qlat.QLearningAgentDisTiles(env)
-#examine_environment_Acrobat_tiled(env, n_bins)
-#state_size = env.observation_space.shape[0]
-#action_size = env.action_space.n
-#print("env.observation_space.shape[0]", state_size)
-#print("env.action_space", action_size)
-
-"""
-# Create DDPG network agent
-"""
-from agents.DDPG import DDPG
-agent = DDPG(env)
+if selectedAgent == 2:
+    # Create DDPG network agent
+    from agents.DDPG import DDPG
+    agent = DDPG(env)
 
 
 """
@@ -133,4 +135,5 @@ print('Final score:', score)
 """
 # Exit Environment
 """
-#env.close()
+if 0:
+    env.close()

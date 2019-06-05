@@ -73,7 +73,7 @@ class QLearningAgent:
         self.last_action = action
         return action
     
-    def learn(self, state, reward=None, done=None):
+    def learn(self, action, reward, state, done):
         """Pick next action and update internal Q table (when mode != 'test')."""
         state = self.preprocess_state(state)
         # Train mode (default): Update Q table, pick next action

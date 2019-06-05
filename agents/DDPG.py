@@ -102,6 +102,20 @@ class Actor:
         # Define input layer (states)
         states = keras.layers.Input(shape=(self.state_size,), name='states')
 
+        print("self.state_size", self.state_size)
+
+#        net = keras.layers.Conv2D(filters=16, kernel_size=8, padding='same', activation='relu', 
+#                                input_shape=(32, 32, 3))(states)
+#        net = keras.layers.MaxPooling2D(pool_size=2)(net)
+#        net = keras.layers.Conv2D(filters=32, kernel_size=4, padding='same', activation='relu')(net)
+#        net = keras.layers.MaxPooling2D(pool_size=2)(net)
+#        net = keras.layers.Conv2D(filters=64, kernel_size=2, padding='same', activation='relu')(net)
+#        net = keras.layers.MaxPooling2D(pool_size=2)(net)
+#        net = keras.layers.Dropout(0.3)(net)
+#        net = keras.layers.Flatten()(net)
+#        net = keras.layers.Dense(units=300, activation='elu')(net)
+
+
         # Kernel initializer with fan-in mode and scale of 1.0
         kernel_initializer = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
 
@@ -168,6 +182,20 @@ class Critic:
         # their Q-values. This is reflected in the following input layers.
         states = keras.layers.Input(shape=(self.state_size,), name='states')
         actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+
+
+#        net_states = keras.layers.Conv2D(filters=16, kernel_size=2, padding='same', activation='relu', 
+#                                input_shape=(32, 32, 3))(states)
+#        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+#        net_states = keras.layers.Conv2D(filters=32, kernel_size=2, padding='same', activation='relu')(net_states)
+#        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+#        net_states = keras.layers.Conv2D(filters=64, kernel_size=2, padding='same', activation='relu')(net_states)
+#        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+#        net_states = keras.layers.Dropout(0.3)(net_states)
+#        net_states = keras.layers.Flatten()(net_states)
+#        net_states = keras.layers.Dense(units=300, activation='elu')(net_states)
+#
+#        net_actions = keras.layers.Dense(units=400, activation='elu')(actions)
 
         # Kernel initializer with fan-in mode and scale of 1.0
         kernel_initializer = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
@@ -251,12 +279,14 @@ class DDPG():
         self.action_size = task.action_space.shape[0]
         self.action_low = task.action_space.low[0]
         self.action_high = task.action_space.high[0]
-       
+              
         # If task is OpenAi Gym 'MountainCarContinuous-v0' environment
         # Adjust state size to take advantage of action_repeat parameter.
         # Must do this here when running the 'MountainCarContinuous-v0' environment.
-        self.action_repeat = 3
+        self.action_repeat = 1
         self.state_size = task.observation_space.shape[0] * self.action_repeat
+
+        print("task.observation_space: ", task.observation_space)
 
         # Actor (Policy) Model
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
