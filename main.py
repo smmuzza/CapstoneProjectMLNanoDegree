@@ -89,7 +89,10 @@ if selectedAgent == 1:
 if selectedAgent == 2:
     # Create DDPG network agent
     from agents.DDPG import DDPG
-    agent = DDPG(env)
+    agent = DDPG(env)  
+    obsSpace = env.observation_space.shape
+    print("task.observation_space: ", obsSpace)
+
 
 
 """

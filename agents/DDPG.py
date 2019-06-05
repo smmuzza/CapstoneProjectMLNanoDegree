@@ -104,8 +104,8 @@ class Actor:
 
         print("self.state_size", self.state_size)
 
-#        net = keras.layers.Conv2D(filters=16, kernel_size=8, padding='same', activation='relu', 
-#                                input_shape=(32, 32, 3))(states)
+#        states = keras.layers.Conv2D(filters=16, kernel_size=8, padding='same', activation='relu', 
+#                                input_shape=(96, 96, 3))
 #        net = keras.layers.MaxPooling2D(pool_size=2)(net)
 #        net = keras.layers.Conv2D(filters=32, kernel_size=4, padding='same', activation='relu')(net)
 #        net = keras.layers.MaxPooling2D(pool_size=2)(net)
@@ -184,8 +184,8 @@ class Critic:
         actions = keras.layers.Input(shape=(self.action_size,), name='actions')
 
 
-#        net_states = keras.layers.Conv2D(filters=16, kernel_size=2, padding='same', activation='relu', 
-#                                input_shape=(32, 32, 3))(states)
+#        states = keras.layers.Conv2D(filters=16, kernel_size=2, padding='same', activation='relu', 
+#                                input_shape=(96, 96, 3))(states)
 #        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
 #        net_states = keras.layers.Conv2D(filters=32, kernel_size=2, padding='same', activation='relu')(net_states)
 #        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
@@ -286,8 +286,6 @@ class DDPG():
         self.action_repeat = 1
         self.state_size = task.observation_space.shape[0] * self.action_repeat
 
-        print("task.observation_space: ", task.observation_space)
-
         # Actor (Policy) Model
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
         self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
@@ -322,7 +320,6 @@ class DDPG():
         self.explore_p = 1.0
 
     def reset_episode(self, state):
-#        state = self.task.reset()
         
         # Since the task is OpenAi Gym 'MountainCarContinuous-v0' environment, 
         # we must expand the state returned from the gym environment according to 
@@ -354,7 +351,7 @@ class DDPG():
     def act(self, state):       
                  
         # Ensure that size of next_state as returned from the 
-        # 'MountainCarContinuous-v0' environment is increased in 
+        # environment is increased in 
         # size according to the action_repeat parameter's value.
         state = np.concatenate([state] * self.action_repeat) 
        
@@ -362,13 +359,6 @@ class DDPG():
         explore_start = 1.0            # exploration probability at start
         explore_stop = 0.01            # minimum exploration probability 
         decay_rate = 0.00001            # exponential decay rate for exploration prob
-
-            # exploration policy
-            # TDOO put inside agent.act
-#            if i_episode < max_explore_eps:
-#                p = i_episode/max_explore_eps
-#                nextNoise = next(noise)
-#                action = action*p + (1-p)*nextNoise # Only a fraction of the action's value gets perturbed
 
         # Explore or Exploit
         self.explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*self.stepCount) 
@@ -390,7 +380,7 @@ class DDPG():
     def learn(self, action, reward, next_state, done):
         
         # Ensure that size of next_state as returned from the 
-        # 'MountainCarContinuous-v0' environment is increased in 
+        # environment is increased in 
         # size according to the action_repeat parameter's value.
         next_state = np.concatenate([next_state] * self.action_repeat) 
         
@@ -398,9 +388,8 @@ class DDPG():
         self.memory.add(self.last_state, action, reward, next_state, done)
 
         # Learn, if enough samples are available in memory
-        if len(self.memory) > self.batch_size*3:    # Warm up period is 3 times longer than typical
+        if len(self.memory) > self.batch_size:
             experiences = self.memory.sample(self.batch_size)
-#            self.learn(experiences)
         
             """Update policy and value parameters using given batch of experience tuples."""
             # Convert experience tuples to separate arrays for each element (states, actions, rewards, etc.)
