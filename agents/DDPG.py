@@ -22,16 +22,6 @@ class OUNoise:
         self.state = x + dx
         return self.state
     
-##OU Noise method for this task
-#def OUNoise():
-#    theta = 0.15
-#    sigma = 0.2
-#    state = 0
-#    while True:
-#        yield state
-#        state += -theta*state+sigma*np.random.randn()
-
-
 import random
 from collections import namedtuple, deque
 
@@ -81,7 +71,7 @@ class Actor:
     https://arxiv.org/pdf/1509.02971.pdf
     """
 
-    def __init__(self, state_size, action_size, action_low, action_high):
+    def __init__(self, state_size, action_size, action_low, action_high, netArch):
         """Initialize parameters and build model.
         Params
         ======
@@ -95,46 +85,55 @@ class Actor:
         self.action_low = action_low
         self.action_high = action_high
         self.action_range = self.action_high - self.action_low
+        self.netArch = netArch # network architecture selection
         self.build_model()
 
     def build_model(self):
         """Build an actor (policy) network that maps states -> actions."""
-        # Define input layer (states)
-        states = keras.layers.Input(shape=(self.state_size,), name='states')
+        states = 0
+        actions = 0
+        
+        if self.netArch =="Lillicrap":
+            # Define input layer (states)
+            states = keras.layers.Input(shape=(self.state_size,), name='states')
+    
+            # Kernel initializer with fan-in mode and scale of 1.0
+            kernel_initializer = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
+    
+            # Add hidden layers
+            net = keras.layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(states)
+            net = keras.layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
+    
+            # Add final output layer with sigmoid activation
+            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions', kernel_initializer=kernel_initializer)(net)
 
-        print("self.state_size", self.state_size)
+        elif self.netArch == "imageInputV1":     
 
-#        states = keras.layers.Conv2D(filters=16, kernel_size=8, padding='same', activation='relu', 
-#                                input_shape=(96, 96, 3))
-#        net = keras.layers.MaxPooling2D(pool_size=2)(net)
-#        net = keras.layers.Conv2D(filters=32, kernel_size=4, padding='same', activation='relu')(net)
-#        net = keras.layers.MaxPooling2D(pool_size=2)(net)
-#        net = keras.layers.Conv2D(filters=64, kernel_size=2, padding='same', activation='relu')(net)
-#        net = keras.layers.MaxPooling2D(pool_size=2)(net)
-#        net = keras.layers.Dropout(0.3)(net)
-#        net = keras.layers.Flatten()(net)
-#        net = keras.layers.Dense(units=300, activation='elu')(net)
+            # for img state space
+            states = keras.layers.Input(shape=(96, 96, 3), name='states')
+            net = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.Dropout(0.3)(net)
+            net = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.Dropout(0.3)(net)
+            net = keras.layers.Flatten()(net)
+            net = keras.layers.Dense(units=256, activation='relu')(net)
+            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
 
-
-        # Kernel initializer with fan-in mode and scale of 1.0
-        kernel_initializer = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
-
-        # Add hidden layers
-        net = keras.layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(states)
-        net = keras.layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
-
-        # Add final output layer with sigmoid activation
-        raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions', kernel_initializer=kernel_initializer)(net)
-
-        # Note that the raw actions produced by the output layer are in a [0.0, 1.0] range
-        # (using a sigmoid activation function). So, we add another layer that scales each
-        # output to the desired range for each action dimension. This produces a deterministic
-        # action for any given state vector.
-        actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
-            name='actions')(raw_actions)
+            # Note that the raw actions produced by the output layer are in a [0.0, 1.0] range
+            # (using a sigmoid activation function). So, we add another layer that scales each
+            # output to the desired range for each action dimension. This produces a deterministic
+            # action for any given state vector.
+            actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
+                name='actions')(raw_actions)
 
         # Create Keras model
         self.model = keras.models.Model(inputs=states, outputs=actions)
+        print("\n\n*** ACTOR MODEL SUMMARY ***\n\n")
+        self.model.summary()
 
         # Define loss function using action value (Q value) gradients
         # These gradients will need to be computed using the critic model, and
@@ -165,7 +164,7 @@ class Critic:
     https://arxiv.org/pdf/1509.02971.pdf
     """
 
-    def __init__(self, state_size, action_size):
+    def __init__(self, state_size, action_size, netArch):
         """Initialize parameters and build model.
         Params
         ======
@@ -174,51 +173,73 @@ class Critic:
         """
         self.state_size = state_size
         self.action_size = action_size
+        self.netArch = netArch # network architecture selection
         self.build_model()
 
     def build_model(self):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
-        # Define input layers. The critic model needs to map (state, action) pairs to
-        # their Q-values. This is reflected in the following input layers.
-        states = keras.layers.Input(shape=(self.state_size,), name='states')
-        actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+        states = 0
+        actions = 0
+        
+        if self.netArch =="Lillicrap":
+            # Define input layers. The critic model needs to map (state, action) pairs to
+            # their Q-values. This is reflected in the following input layers.
+            states = keras.layers.Input(shape=(self.state_size,), name='states')
+            actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+    
+            # Kernel initializer with fan-in mode and scale of 1.0
+            kernel_initializer = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
+    
+            # Add hidden layer(s) for state pathway
+            net_states = keras.layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(states)
+    
+            # Add hidden layer(s) for action pathway
+            net_actions = keras.layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(actions)
+    
+            # Combine state and action pathways. The two layers can first be processed via separate
+            # "pathways" (mini sub-networks), but eventually need to be combined.
+            net = keras.layers.Add()([net_states, net_actions])
+    
+            # Add more layers to the combined network if needed
+            net = keras.layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
+    
+            # Add final output layer to produce action values (Q values). The final output
+            # of this model is the Q-value for any given (state, action) pair.
+            Q_values = keras.layers.Dense(units=1, activation=None, name='q_values', kernel_initializer=kernel_initializer)(net)
+
+        elif self.netArch == "imageInputV1":     
+            # for img state space
+            actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+            # Add hidden layer(s) for action pathway
+            net_actions = keras.layers.Dense(units=256, activation='elu')(actions)
+    
+            states = keras.layers.Input(shape=(96, 96, 3), name='states')
+            net_states = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(states)
+            net_states = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net_states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.Dropout(0.3)(net_states)
+            net_states = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net_states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.Dropout(0.3)(net_states)
+            net_states = keras.layers.Flatten()(net_states)
+            net_states = keras.layers.Dense(units=256, activation='relu')(net_states)
+    
+            net = keras.layers.Add()([net_states, net_actions])
+    
+            # Add more layers to the combined network if needed
+            net = keras.layers.Dense(units=256, activation='relu')(net)
+           
+            # Add final output layer to produce action values (Q values). The final output
+            # of this model is the Q-value for any given (state, action) pair.
+            Q_values = keras.layers.Dense(units=1, activation=None, name='q_values')(net)
 
 
-#        states = keras.layers.Conv2D(filters=16, kernel_size=2, padding='same', activation='relu', 
-#                                input_shape=(96, 96, 3))(states)
-#        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
-#        net_states = keras.layers.Conv2D(filters=32, kernel_size=2, padding='same', activation='relu')(net_states)
-#        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
-#        net_states = keras.layers.Conv2D(filters=64, kernel_size=2, padding='same', activation='relu')(net_states)
-#        net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
-#        net_states = keras.layers.Dropout(0.3)(net_states)
-#        net_states = keras.layers.Flatten()(net_states)
-#        net_states = keras.layers.Dense(units=300, activation='elu')(net_states)
-#
-#        net_actions = keras.layers.Dense(units=400, activation='elu')(actions)
-
-        # Kernel initializer with fan-in mode and scale of 1.0
-        kernel_initializer = keras.initializers.VarianceScaling(scale=1.0, mode='fan_in', distribution='normal', seed=None)
-
-        # Add hidden layer(s) for state pathway
-        net_states = keras.layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(states)
-
-        # Add hidden layer(s) for action pathway
-        net_actions = keras.layers.Dense(units=400, activation='elu', kernel_initializer=kernel_initializer)(actions)
-
-        # Combine state and action pathways. The two layers can first be processed via separate
-        # "pathways" (mini sub-networks), but eventually need to be combined.
-        net = keras.layers.Add()([net_states, net_actions])
-
-        # Add more layers to the combined network if needed
-        net = keras.layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
-
-        # Add final output layer to produce action values (Q values). The final output
-        # of this model is the Q-value for any given (state, action) pair.
-        Q_values = keras.layers.Dense(units=1, activation=None, name='q_values', kernel_initializer=kernel_initializer)(net)
 
         # Create Keras model
         self.model = keras.models.Model(inputs=[states, actions], outputs=Q_values)
+        print("\n\n*** CRITIC MODEL SUMMARY ***\n\n")
+        self.model.summary()
 
         # Define optimizer and compile model for training with built-in loss function
         # Use learning rate of 0.001
@@ -238,7 +259,16 @@ class Critic:
             outputs=action_gradients)
         
 
-        
+# Sets all pixel values to be between (0,1)
+# Parameters:
+# - image: A grayscale (nxmx1) or RGB (nxmx3) array of floats
+# Outputs:
+# - image rescaled so all pixels are between 0 and 1
+def unit_image(image):
+    image = np.array(image)
+    return np.true_divide(image, 255)
+    
+    
 class DDPG():
     """
     Reinforcement Learning agent that learns by using DDPG, or Deep 
@@ -256,8 +286,8 @@ class DDPG():
     adopted from sample code that introduced DDPG in the Reinforcement Learning 
     lesson in Udacity's Machine Learning Engineer nanodegree.
     
-    Certain modifications to the Udacity approach, such as using an 
-    initial exploration policy to warm up (3 times longer than typical) a larger memory buffer 
+    Certain modifications to the Udacity approach, such as using 
+    a larger memory buffer  
     (batch size of 256 instead of 64) was inspired by another DDPG solution 
     to OpenAI Gym's 'MountainCarContinuous-v0' environment. This 
     implementation can be viewed at: 
@@ -270,7 +300,7 @@ class DDPG():
     producing target values.
     """
     
-    def __init__(self, task):
+    def __init__(self, task, envType):
         self.task = task
 
         # For OpenAI Gym envs, the following attributes need 
@@ -285,14 +315,18 @@ class DDPG():
         # Must do this here when running the 'MountainCarContinuous-v0' environment.
         self.action_repeat = 1
         self.state_size = task.observation_space.shape[0] * self.action_repeat
+        
+        # Set the typo of OpenAI Enviroment
+        # Currently continuousStateAction, and imageStateContinuousAction are supported
+        self.envType = envType
 
         # Actor (Policy) Model
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
+        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "imageInputV1")
+        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "imageInputV1")
 
         # Critic (Value) Model
-        self.critic_local = Critic(self.state_size, self.action_size)
-        self.critic_target = Critic(self.state_size, self.action_size)
+        self.critic_local = Critic(self.state_size, self.action_size, "imageInputV1")
+        self.critic_target = Critic(self.state_size, self.action_size, "imageInputV1")
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
@@ -300,7 +334,12 @@ class DDPG():
 
         # Replay memory
         self.buffer_size = 10000
-        self.batch_size = 256
+        if self.envType == "continousStateAction":
+            self.batch_size = 256
+        elif self.envType == "imageStateContinuousAction":
+            self.batch_size = 1
+        else:    
+            raise("\nDDPG:__init__: ERROR! unsupported env type!\n")            
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
@@ -308,12 +347,6 @@ class DDPG():
         self.tau = 0.001   # for soft update of target parameters
         
         # Exploration Policy
-                # Noise process (should be in units of RPMs for each rotor)
-        self.exploration_mu = 0       # original 0
-        self.exploration_theta = 0.15 # original 0.15
-        self.exploration_sigma = 0.2  # oringal 0.2
-        self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
-        
         self.i_episode = 0
         self.max_explore_eps = 100 # duration of exploration phase using OU noise
         self.stepCount = 0
@@ -325,6 +358,9 @@ class DDPG():
         # we must expand the state returned from the gym environment according to 
         # our chosen action_repeat parameter value.
         state = np.concatenate([state] * self.action_repeat) 
+        
+        if self.envType == "imageStateContinuousAction":
+            state = unit_image(state) # normalize to between 0-1
         
         self.last_state = state
         
@@ -341,7 +377,10 @@ class DDPG():
         # 'MountainCarContinuous-v0' environment is increased in 
         # size according to the action_repeat parameter's value.
         next_state = np.concatenate([next_state] * self.action_repeat) 
-
+        
+        if self.envType == "imageStateContinuousAction":
+            next_state = unit_image(next_state)
+        
         # increase step count
         self.stepCount += 1
 
@@ -354,11 +393,14 @@ class DDPG():
         # environment is increased in 
         # size according to the action_repeat parameter's value.
         state = np.concatenate([state] * self.action_repeat) 
+        
+        if self.envType == "imageStateContinuousAction":
+            state = unit_image(state)
        
         # Exploration parameters
         explore_start = 1.0            # exploration probability at start
         explore_stop = 0.01            # minimum exploration probability 
-        decay_rate = 0.00001            # exponential decay rate for exploration prob
+        decay_rate = 0.00001           # exponential decay rate for exploration prob
 
         # Explore or Exploit
         self.explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*self.stepCount) 
@@ -372,7 +414,11 @@ class DDPG():
         #                action = explore_p * env.action_space.sample() + (1 - explore_p) * agent.act(state)
         else:
             """Returns action(s) for given state(s) as per current policy."""
-            state = np.reshape(state, [-1, self.state_size])
+            if self.envType == "continousStateAction":
+                state = np.reshape(state, [-1, self.state_size])
+            elif self.envType == "imageStateContinuousAction":
+                state = np.expand_dims(state, axis=0)  # for img state space
+
             action = self.actor_local.model.predict(state)[0]
         
         return action
@@ -383,6 +429,9 @@ class DDPG():
         # environment is increased in 
         # size according to the action_repeat parameter's value.
         next_state = np.concatenate([next_state] * self.action_repeat) 
+        
+        if self.envType == "imageStateContinuousAction":
+            next_state = unit_image(next_state)
         
         # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done)
@@ -400,11 +449,16 @@ class DDPG():
             next_states = np.vstack([e.next_state for e in experiences if e is not None])
     
             # Get predicted next-state actions and Q values from target models
+            if self.envType == "imageStateContinuousAction":
+                next_states = np.expand_dims(next_states, axis=0) # for img state space
+                
             actions_next = self.actor_target.model.predict_on_batch(next_states)
             Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
     
             # Compute Q targets for current states and train critic model (local)
             Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
+            if self.envType == "imageStateContinuousAction":
+                states = np.expand_dims(states, axis=0) # for img state space
             self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
     
             # Train actor model (local)

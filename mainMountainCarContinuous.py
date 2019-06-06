@@ -25,12 +25,12 @@ import sys
 
 # Classic Control - Continuous State and Action Spaces
 #env = gym.make('Pendulum-v0') # continuous only
-env = gym.make('MountainCarContinuous-v0') # continuous only
+#env = gym.make('MountainCarContinuous-v0') # continuous only
 
 # Box 2D
 #env = gym.make('BipedalWalker-v2') # continuous only
 #env = gym.make('LunarLanderContinuous-v2')
-#env = gym.make('CarRacing-v0')      # pixel input, needs some agent customization
+env = gym.make('CarRacing-v0')      # pixel input, needs some agent customization
 
 # Atari
 #env = gym.make('MsPacman-v0')
@@ -45,7 +45,7 @@ state = env.reset()
 from visuals import examine_environment, examine_environment_MountainCar_discretized, examine_environment_Acrobat_tiled
 #examine_environment(env)
 
-agent = DDPG(env)
+agent = DDPG(env, "imageStateContinuousAction")
 action_repeat = 3   # put inside agent
 num_episodes = 200
 rewards_list = []                               # store the total rewards earned for each episode

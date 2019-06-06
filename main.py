@@ -45,12 +45,12 @@ MountainCarContinuous-v0 usually solves within 100-200 episodes
 
 # Classic Control - Continuous State and Action Spaces
 #env = gym.make('Pendulum-v0') # continuous only
-env = gym.make('MountainCarContinuous-v0') # continuous only
+#env = gym.make('MountainCarContinuous-v0') # continuous only
 
 # Box 2D - Continuous State and Action Spaces
 #env = gym.make('BipedalWalker-v2')  # continuous only
 #env = gym.make('LunarLanderContinuous-v2') # continuous only
-#env = gym.make('CarRacing-v0')      # make the environment
+env = gym.make('CarRacing-v0')      # make the environment
 
 # Atari
 #env = gym.make('MsPacman-v0')
@@ -89,7 +89,7 @@ if selectedAgent == 1:
 if selectedAgent == 2:
     # Create DDPG network agent
     from agents.DDPG import DDPG
-    agent = DDPG(env)  
+    agent = DDPG(env, "imageStateContinuousAction")  
     obsSpace = env.observation_space.shape
     print("task.observation_space: ", obsSpace)
 
@@ -112,7 +112,8 @@ rolling_mean = plot_scores(scores)
 """
 # Run in test mode and analyze scores obtained
 """
-test_scores = sim.run(agent, env, num_episodes=100, mode='test')
+print("[TEST] Training Done, now running tests...")
+test_scores = sim.run(agent, env, num_episodes=5, mode='test')
 print("[TEST] Completed {} episodes with avg. score = {}".format(len(test_scores), np.mean(test_scores)))
 _ = plot_scores(test_scores)
 
