@@ -107,6 +107,13 @@ class Actor:
             # Add final output layer with sigmoid activation
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions', kernel_initializer=kernel_initializer)(net)
 
+            # Note that the raw actions produced by the output layer are in a [0.0, 1.0] range
+            # (using a sigmoid activation function). So, we add another layer that scales each
+            # output to the desired range for each action dimension. This produces a deterministic
+            # action for any given state vector.
+            actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
+                name='actions')(raw_actions)
+            
         elif self.netArch == "imageInputV1":     
 
             # for img state space
@@ -321,12 +328,12 @@ class DDPG():
         self.envType = envType
 
         # Actor (Policy) Model
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "imageInputV1")
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "imageInputV1")
+        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "Lillicrap")
+        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "Lillicrap")
 
         # Critic (Value) Model
-        self.critic_local = Critic(self.state_size, self.action_size, "imageInputV1")
-        self.critic_target = Critic(self.state_size, self.action_size, "imageInputV1")
+        self.critic_local = Critic(self.state_size, self.action_size, "Lillicrap")
+        self.critic_target = Critic(self.state_size, self.action_size, "Lillicrap")
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
