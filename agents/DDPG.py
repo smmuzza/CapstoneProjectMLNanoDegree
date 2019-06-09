@@ -1,27 +1,5 @@
 import numpy as np
-import copy
 
-class OUNoise:
-    """Ornstein-Uhlenbeck process."""
-
-    def __init__(self, size, mu, theta, sigma):
-        """Initialize parameters and noise process."""
-        self.mu = mu * np.ones(size)
-        self.theta = theta
-        self.sigma = sigma
-        self.reset()
-
-    def reset(self):
-        """Reset the internal state (= noise) to mean (mu)."""
-        self.state = copy.copy(self.mu)
-
-    def sample(self):
-        """Update internal state and return it as a noise sample."""
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
-        self.state = x + dx
-        return self.state
-    
 import random
 from collections import namedtuple, deque
 
@@ -65,10 +43,6 @@ class Actor:
     underlying policy function used is deterministic in nature, with
     some noise added in externally to produce the desired stochasticity
     in actions taken.
-    Algorithm originally presented in this paper:
-    Lillicrap, Timothy P., et al., 2015. Continuous Control with Deep
-    Reinforcement Learning
-    https://arxiv.org/pdf/1509.02971.pdf
     """
 
     def __init__(self, state_size, action_size, action_low, action_high, netArch):
@@ -88,10 +62,18 @@ class Actor:
         self.netArch = netArch # network architecture selection
         self.build_model()
 
+        print("*** init actor ***")
+        print("self.action_range: ", self.action_range)
+
     def build_model(self):
         """Build an actor (policy) network that maps states -> actions."""
         states = 0
         actions = 0
+
+        def scale_output(x):
+            temp = (x * np.array(self.action_range)) + np.array(self.action_low)
+            return temp          
+        
         
         if self.netArch =="Lillicrap":
             # Define input layer (states)
@@ -111,36 +93,38 @@ class Actor:
             # (using a sigmoid activation function). So, we add another layer that scales each
             # output to the desired range for each action dimension. This produces a deterministic
             # action for any given state vector.
-            actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
-                name='actions')(raw_actions)
+            actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low, name='actions')(raw_actions)
+#            actions = keras.layers.Lambda(lambda x: x, name='actions')(raw_actions)
+#            actions = keras.layers.Lambda(scale_output, name='actions')(raw_actions)
+#            actions = keras.layers.Lambda(scale_putsParallel, scale_putsParallel_shape, name='actions')(raw_actions)
             
         elif self.netArch == "imageInputV1":     
 
             # for img state space
             states = keras.layers.Input(shape=(96, 96, 3), name='states')
             net = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
-            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+#            net = keras.layers.MaxPooling2D(pool_size=2)(net)
             net = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net)
-            net = keras.layers.MaxPooling2D(pool_size=2)(net)
-            net = keras.layers.Dropout(0.3)(net)
+#            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+#            net = keras.layers.Dropout(0.3)(net)
             net = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net)
-            net = keras.layers.MaxPooling2D(pool_size=2)(net)
-            net = keras.layers.Dropout(0.3)(net)
+#            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+#            net = keras.layers.Dropout(0.3)(net)
             net = keras.layers.Flatten()(net)
-            net = keras.layers.Dense(units=256, activation='relu')(net)
+            net = keras.layers.Dense(units=512, activation='relu')(net)
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
 
             # Note that the raw actions produced by the output layer are in a [0.0, 1.0] range
             # (using a sigmoid activation function). So, we add another layer that scales each
             # output to the desired range for each action dimension. This produces a deterministic
             # action for any given state vector.
-            actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
-                name='actions')(raw_actions)
+            actions = keras.layers.Lambda(lambda x: x, name='actions')(raw_actions)
+            # SUSPECT THAT LAMBDA IS NOT SCALING PROPERLY FOR MULTI-D ACTIONS WITH DIFFERENT RANGES
 
         # Create Keras model
         self.model = keras.models.Model(inputs=states, outputs=actions)
-        print("\n\n*** ACTOR MODEL SUMMARY ***\n\n")
-        self.model.summary()
+#        print("\n\n*** ACTOR MODEL SUMMARY ***\n\n")
+#        self.model.summary()
 
         # Define loss function using action value (Q value) gradients
         # These gradients will need to be computed using the critic model, and
@@ -151,7 +135,8 @@ class Actor:
 
         # Define optimizer and training function
         # Use learning rate of 0.0001
-        optimizer = keras.optimizers.Adam(lr=0.0001)
+        optimizer = keras.optimizers.Adam(lr=0.0001) # amsgrad=True
+#        optimizer = keras.optimizers.Adam(lr=0.0001, amsgrad=True) # amsgrad=True
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = keras.backend.function(
             inputs=[self.model.input, action_gradients, keras.backend.learning_phase()],
@@ -165,10 +150,6 @@ class Critic:
     underlying policy function used is deterministic in nature, with
     some noise added in externally to produce the desired stochasticity
     in actions taken.
-    Algorithm originally presented in this paper:
-    Lillicrap, Timothy P., et al., 2015. Continuous Control with Deep
-    Reinforcement Learning
-    https://arxiv.org/pdf/1509.02971.pdf
     """
 
     def __init__(self, state_size, action_size, netArch):
@@ -218,19 +199,19 @@ class Critic:
             # for img state space
             actions = keras.layers.Input(shape=(self.action_size,), name='actions')
             # Add hidden layer(s) for action pathway
-            net_actions = keras.layers.Dense(units=256, activation='elu')(actions)
+            net_actions = keras.layers.Dense(units=512, activation='relu')(actions)
     
             states = keras.layers.Input(shape=(96, 96, 3), name='states')
             net_states = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
-            net_states = keras.layers.MaxPooling2D(pool_size=2)(states)
+#            net_states = keras.layers.MaxPooling2D(pool_size=2)(states)
             net_states = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net_states)
-            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
-            net_states = keras.layers.Dropout(0.3)(net_states)
+#            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+#            net_states = keras.layers.Dropout(0.3)(net_states)
             net_states = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net_states)
-            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
-            net_states = keras.layers.Dropout(0.3)(net_states)
+#            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+#            net_states = keras.layers.Dropout(0.3)(net_states)
             net_states = keras.layers.Flatten()(net_states)
-            net_states = keras.layers.Dense(units=256, activation='relu')(net_states)
+            net_states = keras.layers.Dense(units=512, activation='relu')(net_states)
     
             net = keras.layers.Add()([net_states, net_actions])
     
@@ -245,12 +226,13 @@ class Critic:
 
         # Create Keras model
         self.model = keras.models.Model(inputs=[states, actions], outputs=Q_values)
-        print("\n\n*** CRITIC MODEL SUMMARY ***\n\n")
-        self.model.summary()
+#        print("\n\n*** CRITIC MODEL SUMMARY ***\n\n")
+#        self.model.summary()
 
         # Define optimizer and compile model for training with built-in loss function
         # Use learning rate of 0.001
         optimizer = keras.optimizers.Adam(lr=0.001)
+#        optimizer = keras.optimizers.Adam(lr=0.0001, amsgrad=True)
         self.model.compile(optimizer=optimizer, loss='mse')
 
         # Compute action gradients (derivative of Q values w.r.t. to actions). We also need
@@ -275,6 +257,11 @@ def unit_image(image):
     image = np.array(image)
     return np.true_divide(image, 255)
     
+# scales the output actions from the network
+# this is important for multi dimensional actions with different ranges and low/hgh values    
+def scale_output(x, action_range, action_low):
+    temp = (np.array(x) * np.array(action_range)) + np.array(action_low)
+    return temp             
     
 class DDPG():
     """
@@ -288,10 +275,9 @@ class DDPG():
     Reinforcement Learning
     https://arxiv.org/pdf/1509.02971.pdf
     
-    Code in this class, as well as from the Actor, Critic, and 
-    ReplayBuffer classes in model_ddpg_agent_mountain_car_continuous.py was 
-    adopted from sample code that introduced DDPG in the Reinforcement Learning 
-    lesson in Udacity's Machine Learning Engineer nanodegree.
+    Code in this class, as well as from the Actor, Critic, and ReplayBuffer 
+    classes in are based on DDPG sample code in the Reinforcement Learning 
+    Quadcopter Project in Udacity's Machine Learning Engineer nanodegree.
     
     Certain modifications to the Udacity approach, such as using 
     a larger memory buffer  
@@ -310,16 +296,27 @@ class DDPG():
     def __init__(self, task, envType):
         self.task = task
 
+        print("Initializing DDPG Agent")
+        print("\ttask: ", task)
+
         # For OpenAI Gym envs, the following attributes need 
         # to be calculated differently from from a standard 
         # Quadcopter task.
         self.action_size = task.action_space.shape[0]
-        self.action_low = task.action_space.low[0]
-        self.action_high = task.action_space.high[0]
-              
-        # If task is OpenAi Gym 'MountainCarContinuous-v0' environment
-        # Adjust state size to take advantage of action_repeat parameter.
-        # Must do this here when running the 'MountainCarContinuous-v0' environment.
+#        self.action_low = task.action_space.low[0]   # only works if there is a single action output
+#        self.action_high = task.action_space.high[0] # only works if there is a single action output
+        self.action_low = task.action_space.low       # can be an array depending on the environment
+        self.action_high = task.action_space.high     # can be an array depending on the environment
+        self.action_range = self.action_high - self.action_low  # can be an array depending on the environment
+
+        print("task.action_space.shape", task.action_space.shape)
+        print("task.action_space.low", task.action_space.low)
+        print("task.action_space.high", task.action_space.high)
+        print("task.action_space.shape[0]", task.action_space.shape[0])
+        print("task.action_space.low[0]", task.action_space.low[0])
+        print("task.action_space.high[0]", task.action_space.high[0])      
+        
+        # If env is OpenAi Gym, we can also use action repeat.
         self.action_repeat = 1
         self.state_size = task.observation_space.shape[0] * self.action_repeat
         
@@ -327,35 +324,44 @@ class DDPG():
         # Currently continuousStateAction, and imageStateContinuousAction are supported
         self.envType = envType
 
+        # select network based on enviromnet type
+        networkArch = "Lillicrap" # default
+        if envType == "imageStateContinuousAction":
+            networkArch = "imageInputV1"
+
         # Actor (Policy) Model
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "Lillicrap")
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, "Lillicrap")
+        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, networkArch)
+        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, networkArch)
 
         # Critic (Value) Model
-        self.critic_local = Critic(self.state_size, self.action_size, "Lillicrap")
-        self.critic_target = Critic(self.state_size, self.action_size, "Lillicrap")
+        self.critic_local = Critic(self.state_size, self.action_size, networkArch)
+        self.critic_target = Critic(self.state_size, self.action_size, networkArch)
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
         self.actor_target.model.set_weights(self.actor_local.model.get_weights())
 
         # Replay memory
-        self.buffer_size = 10000
         if self.envType == "continousStateAction":
+            self.buffer_size = 10000 
             self.batch_size = 256
         elif self.envType == "imageStateContinuousAction":
-            self.batch_size = 1
+            self.buffer_size = 10000 
+            self.batch_size = 64
         else:    
             raise("\nDDPG:__init__: ERROR! unsupported env type!\n")            
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
         self.gamma = 0.99  # discount factor
-        self.tau = 0.001   # for soft update of target parameters
+        self.tau = 0.01   # for soft update of target parameters
+        # TODO make tau smaller to converge faster, adjust network learning rates instead
         
         # Exploration Policy
+        self.explore_start = 1.0            # exploration probability at start
+        self.explore_stop = 0.01            # minimum exploration probability 
+        self.decay_rate = 0.0001           # exponential decay rate for exploration prob
         self.i_episode = 0
-        self.max_explore_eps = 100 # duration of exploration phase using OU noise
         self.stepCount = 0
         self.explore_p = 1.0
 
@@ -393,6 +399,7 @@ class DDPG():
 
         # Roll over last state and action
         self.last_state = next_state
+
                 
     def act(self, state):       
                  
@@ -404,13 +411,9 @@ class DDPG():
         if self.envType == "imageStateContinuousAction":
             state = unit_image(state)
        
-        # Exploration parameters
-        explore_start = 1.0            # exploration probability at start
-        explore_stop = 0.01            # minimum exploration probability 
-        decay_rate = 0.00001           # exponential decay rate for exploration prob
-
         # Explore or Exploit
-        self.explore_p = explore_stop + (explore_start - explore_stop)*np.exp(-decay_rate*self.stepCount) 
+        # Use expodentially decaying noise, more consistant results across environments than OU noise
+        self.explore_p = self.explore_stop + (self.explore_start - self.explore_stop)*np.exp(-self.decay_rate*self.stepCount) 
         if self.explore_p > np.random.rand():
             # Make a random action
             action = self.task.action_space.sample()
@@ -426,7 +429,15 @@ class DDPG():
             elif self.envType == "imageStateContinuousAction":
                 state = np.expand_dims(state, axis=0)  # for img state space
 
-            action = self.actor_local.model.predict(state)[0]
+            action = self.actor_local.model.predict(state)[0]    
+#            print("action before: ", action)
+#            action = scale_output(action, self.action_range, self.action_low)
+#            print("action after: ", action)
+            
+#            agentAction = self.actor_local.model.predict(state)[0]                 
+#            randAction = self.task.action_space.sample()
+#            action = agentAction * (1-self.explore_p) + randAction * self.explore_p            
+#            print("\tagent steps cnt: ", self.stepCount, ", with action:", action)
         
         return action
 
@@ -454,18 +465,29 @@ class DDPG():
             rewards = np.array([e.reward for e in experiences if e is not None]).astype(np.float32).reshape(-1, 1)
             dones = np.array([e.done for e in experiences if e is not None]).astype(np.uint8).reshape(-1, 1)
             next_states = np.vstack([e.next_state for e in experiences if e is not None])
+   
+    	    # turn the states and next_states into numpy arrays 
+            # this is important to properly stack image states, as vstack won't work properly on multiple dimensions	
+            states = []
+            for e in experiences:
+                states.append(e.state)
     
-            # Get predicted next-state actions and Q values from target models
-            if self.envType == "imageStateContinuousAction":
-                next_states = np.expand_dims(next_states, axis=0) # for img state space
-                
+            states = np.array(states)
+
+            next_states = []
+            for e in experiences:
+                next_states.append(e.next_state)
+    
+            next_states = np.array(next_states)
+    
+            # Get predicted next-state actions and Q values from target models               
             actions_next = self.actor_target.model.predict_on_batch(next_states)
+#            for act in actions_next:
+#                act = scale_output(act, self.action_range, self.action_low)
             Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
     
             # Compute Q targets for current states and train critic model (local)
             Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-            if self.envType == "imageStateContinuousAction":
-                states = np.expand_dims(states, axis=0) # for img state space
             self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
     
             # Train actor model (local)

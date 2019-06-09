@@ -47,10 +47,13 @@ MountainCarContinuous-v0 usually solves within 100-200 episodes
 #env = gym.make('Pendulum-v0') # continuous only
 env = gym.make('MountainCarContinuous-v0') # continuous only
 
+# Box 2D - Continuous State, Discrete Actions
+#env = gym.make('LunarLander-v2') # discrete actions, continuous state
+
 # Box 2D - Continuous State and Action Spaces
-#env = gym.make('BipedalWalker-v2')  # continuous only
 #env = gym.make('LunarLanderContinuous-v2') # continuous only
-#env = gym.make('CarRacing-v0')      # make the environment
+#env = gym.make('BipedalWalker-v2')  # continuous only
+#env = gym.make('CarRacing-v0')      #  image input, actions [steer, gas, brake]
 
 # Atari
 #env = gym.make('MsPacman-v0')
@@ -99,9 +102,10 @@ if selectedAgent == 2:
 # run the simulation
 """
 import run as sim
-num_episodes=200
+num_episodes=150
 score = 0
-scores = sim.run(agent, env, num_episodes, mode='train')
+file_output_train = 'ddpg_agent_openai_gym.txt'       # file name for saved results
+scores = sim.run(agent, env, num_episodes, mode='train', file_output=file_output_train)
 
 """
 # Plot scores obtained per episode
@@ -109,11 +113,43 @@ scores = sim.run(agent, env, num_episodes, mode='train')
 from visuals import plot_scores, plot_q_table
 rolling_mean = plot_scores(scores)
 
+# Load simulation results from the .csv file
+import pandas as pd
+import matplotlib.pyplot as plt
+# Load simulation results from the .csv file
+results = pd.read_csv(file_output_train)
+
+# Total rewards for each episode
+episode_rewards_mean = results.groupby(['episode'])[['reward']].mean()
+episode_rewards_sum = results.groupby(['episode'])[['reward']].sum()
+
+smoothed_mean = episode_rewards_mean.rolling(25).mean() 
+smoothed_sum = episode_rewards_sum.rolling(25).mean() 
+
+#print(episode_rewards)
+plt.figure(3)
+plt.plot(episode_rewards_mean, label='mean rewards')
+plt.plot(smoothed_mean, label='running mean')
+plt.legend()
+axes = plt.gca()
+axes.set_ylim([-10,10])
+plt.show()  
+
+# plot the sum rewards
+plt.figure(4)
+plt.plot(episode_rewards_sum, label='sum rewards')
+plt.plot(smoothed_sum, label='running mean')
+plt.legend()
+axes = plt.gca()
+axes.set_ylim([-150,150])
+plt.show()  
+
 """
 # Run in test mode and analyze scores obtained
 """
 print("[TEST] Training Done, now running tests...")
-test_scores = sim.run(agent, env, num_episodes=5, mode='test')
+file_output_test = 'ddpg_agent_openai_gym_test.txt'       # file name for saved results
+test_scores = sim.run(agent, env, num_episodes=5, mode='test', file_output=file_output_test)
 print("[TEST] Completed {} episodes with avg. score = {}".format(len(test_scores), np.mean(test_scores)))
 _ = plot_scores(test_scores)
 
