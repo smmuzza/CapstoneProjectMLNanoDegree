@@ -102,7 +102,7 @@ if selectedAgent == 2:
 # run the simulation
 """
 import run as sim
-num_episodes=150
+num_episodes=1000
 score = 0
 file_output_train = 'ddpg_agent_openai_gym.txt'       # file name for saved results
 scores = sim.run(agent, env, num_episodes, mode='train', file_output=file_output_train)
@@ -149,7 +149,7 @@ plt.show()
 """
 print("[TEST] Training Done, now running tests...")
 file_output_test = 'ddpg_agent_openai_gym_test.txt'       # file name for saved results
-test_scores = sim.run(agent, env, num_episodes=5, mode='test', file_output=file_output_test)
+test_scores = sim.run(agent, env, num_episodes=1, mode='test', file_output=file_output_test)
 print("[TEST] Completed {} episodes with avg. score = {}".format(len(test_scores), np.mean(test_scores)))
 _ = plot_scores(test_scores)
 

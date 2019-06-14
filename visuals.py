@@ -140,7 +140,7 @@ def examine_environment_Acrobat_tiled(env, n_bins):
     tile.visualize_encoded_samples(samples, encoded_samples, tilings);
 
 
-def plot_scores(scores, rolling_window=100):
+def plot_scores(scores, rolling_window=50):
     """Plot scores and optional rolling mean using specified window."""
     plt.plot(scores); plt.title("Scores");
     rolling_mean = pd.Series(scores).rolling(rolling_window).mean()

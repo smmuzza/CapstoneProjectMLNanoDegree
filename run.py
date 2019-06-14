@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt 
 import csv
+import time
 
 from visuals import plot_scores
 
@@ -33,7 +34,8 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
             episode_total_reward = 0   # total rewards per episode
             done = False
             actionList = []
-    
+            start_time = time.time()
+
             # Interact with the Environment in steps until done
             while not done:
                 # 1. agent action given environment state
@@ -56,15 +58,18 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
                     env.render()
                     print("\tstep: ", episode_steps, ", action:", action)
     
+                # gather episode results until the end of the episode
                 episode_total_reward += reward
-                episode_steps += 1
-                
+                episode_steps += 1                
                 actionList.append(action)
                 
                 # Save results of timestep of each episode to csv file
                 to_write = [i_episode] + [episode_steps] + [reward]
                 writer.writerow(to_write)
 
+            """
+            Episode Done - Plot Results and Update best episode/reward
+            """
     
             # Save final score of the episode
             scores.append(episode_total_reward)
@@ -76,8 +81,8 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
 
             # plot episode actions for analysis
             plt.figure(2)
-            if(episode_steps > 500): #[0:500]
-                plt.plot(actionList[0:300])
+            if(episode_steps > 400): #[0:500]
+                plt.plot(actionList[0:400])
                 plt.title("actions over steps")
                 plt.show()
             else:             
@@ -87,21 +92,18 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
             
             # Print episode stats
             if mode == 'train':
-    #            if len(scores) > 100:
-    #                avg_score = np.mean(scores[-100:])
-    #                if avg_score > max_avg_score:
-    #                    max_avg_score = avg_score
-    #            if i_episode % 100 == 0:
-    #                print("\rEpisode {}/{} | Max Average Score: {}".format(i_episode, num_episodes, max_avg_score), end="")
-    #                sys.stdout.flush()
-                    
+                  
                 if episode_total_reward > best_reward:
                     best_reward = episode_total_reward 
                     best_episode = i_episode
                 
                 print("\rEpisode = {:4d} (duration of {} steps); Reward = {:7.3f} (best reward = {:7.3f}, in episode {})   ".format(
-                    i_episode, episode_steps, episode_total_reward, best_reward, best_episode), end="")  # [debug]
-                                
+                    i_episode, episode_steps, episode_total_reward, best_reward, best_episode), end="")  # [debug]               
+
+                # show the compute time to train
+                elapsed_time = time.time() - start_time
+                time.strftime("\tEpisode training time %H:%M:%S", time.gmtime(elapsed_time))    
+                
                 sys.stdout.flush()
     
         return scores
