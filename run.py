@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import csv
 import time
+import datetime
 
 from visuals import plot_scores
 
@@ -24,7 +25,8 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
         writer.writerow(labels)
         
         scores = []
-        best_reward = -np.inf                           # keep track of the best reward across episodes
+        best_reward = -np.inf # keep track of the best reward across episodes
+        all_start_time = time.time()
     
         for i_episode in range(1, num_episodes+1):
             # Initialize episode
@@ -45,7 +47,7 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
                 #    (new state, reward, done) to agent
                 # 4. step the agent (forward with the new state)
                               
-                action = agent.act(state)
+                action = agent.act(state, mode)
                 state, reward, done, info = env.step(action)
                 
                 if mode == 'train':
@@ -54,9 +56,9 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
                 agent.step(state)
     
                 # render event 10 steps
-                if(episode_steps % 50 == 0):
-                    env.render()
-                    print("\tstep: ", episode_steps, ", action:", action)
+#                if(episode_steps % 50 == 0):
+#                    env.render()
+#                    print("\tstep: ", episode_steps, ", action:", action)
     
                 # gather episode results until the end of the episode
                 episode_total_reward += reward
@@ -75,20 +77,29 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
             scores.append(episode_total_reward)
             
             # plot scores each 50 episodes
-            if(i_episode % 50 == 0):
+            if(i_episode % 25 == 0):
                 plt.figure(1)
                 _ = plot_scores(scores)
 
             # plot episode actions for analysis
-            plt.figure(2)
-            if(episode_steps > 400): #[0:500]
-                plt.plot(actionList[0:400])
-                plt.title("actions over steps")
-                plt.show()
-            else:             
+            if(i_episode % 5 == 0 and mode == 'train'):
+                plt.figure(2)
+                if(episode_steps > 400): #[0:500]
+                    plt.plot(actionList[0:400])
+                    plt.title("actions over steps")
+                    plt.show()
+                    plt.figure(3)
+                    plt.plot(actionList[400:len(actionList)])
+                    plt.title("actions over steps")
+                    plt.show()
+                else:             
+                    plt.plot(actionList)
+                    plt.title("actions over steps")
+                    plt.show()
+            elif mode != 'train': 
                 plt.plot(actionList)
                 plt.title("actions over steps")
-                plt.show()
+                plt.show()                
             
             # Print episode stats
             if mode == 'train':
@@ -100,10 +111,16 @@ def run(agent, env, num_episodes=20000, mode='train', file_output="results.txt")
                 print("\rEpisode = {:4d} (duration of {} steps); Reward = {:7.3f} (best reward = {:7.3f}, in episode {})   ".format(
                     i_episode, episode_steps, episode_total_reward, best_reward, best_episode), end="")  # [debug]               
 
-                # show the compute time to train
+                # show the compute time to train the episode
                 elapsed_time = time.time() - start_time
-                time.strftime("\tEpisode training time %H:%M:%S", time.gmtime(elapsed_time))    
+                print("\tEpisode training time: ", elapsed_time)    
                 
                 sys.stdout.flush()
+
+        # show the compute time to train for all episodes
+        all_elapsed_time = time.time() - all_start_time
+        print("\tAll episodes training time: ", str(datetime.timedelta(seconds=all_elapsed_time)))    
+        print("\tAverage training time per episode: ", all_elapsed_time/num_episodes)    
+
     
         return scores

@@ -213,7 +213,6 @@ class Actor:
         loss = keras.backend.mean(-action_gradients * actions)
 
         # Define optimizer and training function
-        # Use learning rate of 0.0001
         optimizer = keras.optimizers.Adam(lr=self.learning_rate) # amsgrad=True, 0.00025 ATARI paper learning rate
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = keras.backend.function(
@@ -486,12 +485,62 @@ class DDPG():
         # Currently continuousStateAction, and imageStateContinuousAction are supported
         self.envType = envType
 
+        """
+        --- Experiment Notes ---
+        
+        solve mt climber with copter network
+            1. 75 episodes (unstable solution) with batch size/buffer 32/1024, gamma/tau .99/.01
+               learning rate 0.0001, explore decay 0.00001, action repeat 1
+            2. 140 episodes (unstable solution) with batch size/buffer 128/1024, gamma/tau .995/.005
+               learning rate 0.0001, explore decay 0.00001, action repeat 1
+            3. 90 episodes (stable solution) with batch size/buffer 256/10000, gamma/tau .995/.005
+               learning rate 0.0001, explore decay 0.00001, action repeat 1
+            4. ~170 episodes (no solution) with batch size/buffer 512/10000, gamma/tau .995/.005
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, learn freq 2
+               
+        solve mt climber with copter BIG network
+            1. 100 episodes (stable solution) with batch size/buffer 256/10000, gamma/tau .995/.005
+               learning rate 0.0001, explore decay 0.00001, action repeat 1
+            2. ~140 episodes (no solution) with batch size/buffer 256/10000, gamma/tau 0.0/1.0
+               learning rate 0.0001, explore decay 0.00001, action repeat 1
+            3. 50 episodes (stable solution) with batch size/buffer 256/10000, gamma/tau .995/1.0
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, *no soft update*
+            4. ~700 episodes (converging, but not solution) with batch size/buffer 256/10000, gamma/tau .995/1.0
+               learning rate 0.0001, explore decay 0.00001, action repeat 10, *no soft update*
+               perhaps the explore rate is too low for the number of episodes?
+            5. ~204 episodes (no solution) with batch size/buffer 256/10000, gamma/tau .9/1.0
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, *no soft update*
+            6. 110 episodes (stable solution) with batch size/buffer 128/10000, gamma/tau .995/1.0
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update
+               
+           need to look into a larger memory bugger, 100,000 should make the training more random
+
+
+        cannot solve mt climber with copter batch norm network
+            1. ~251 episodes (no solution) with batch size/buffer 256/10000, gamma/tau .995/.005
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, learn freq 10, batch norm
+
+        Is action repeat useful?
+        
+        It is interesting in that often the agent seems to get worse actions before getting better, similar
+        to language aquisition among humans stated in "The Learning Brain" Great Courses by Prof. Thad A. Polk.
+        Also from this course are the priciples for learning of randomization, spacing, and challenge.
+        
+        Too large batch sizes (>256) seem to lead to overlearning and gradient decent not converging
+        
+        Learning frequency seems to be roughly linearly correlated with how many episodes to solve. Still, this
+        approach is still able to get a solution eventually, learning one to believe that one does not have 
+        to train every episode to find a solution.
+
+        """
+
         # Action Repeat
         self.action_repeat = 1
         self.state_size = env.observation_space.shape[0] * self.action_repeat
 
         # select network based on enviromnet type
         self.learningRate = 0.0001
+        self.learnFrequency = 1 # how many steps per training
         network_arch = "QuadCopterBig" # QuadCopter, QuadCopterBig, QuadCopterBatchNorm, Lillicrap
         if envType == "imageStateContinuousAction":
             network_arch = "imageInputV1"
@@ -510,50 +559,28 @@ class DDPG():
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
         self.actor_target.model.set_weights(self.actor_local.model.get_weights())
 
-        """
-        solve mt climber with copter network
-            1. 75 episodes (unstable solution) with batch size/buffer 32/1024, gamma/tau .99/.01
-               learning rate 0.0001, explore decay 0.00001, action repeat 1
-            2. 140 episodes (unstable solution) with batch size/buffer 128/1024, gamma/tau .995/.005
-               learning rate 0.0001, explore decay 0.00001, action repeat 1
-            3. 90 episodes (stable solution) with batch size/buffer 256/10000, gamma/tau .995/.005
-               learning rate 0.0001, explore decay 0.00001, action repeat 1
-               
-        xxx solve mt climber with copter BIG network
-            1. 100 episodes (stable solution) with batch size/buffer 256/10000, gamma/tau .995/.005
-               learning rate 0.0001, explore decay 0.00001, action repeat 1, batch norm
-
-        cannot solve mt climber with copter batch norm network
-            1. ~100 episodes (no solution) with batch size/buffer 256/10000, gamma/tau .995/.005
-               learning rate 0.0001, explore decay 0.00001, action repeat 1, batch norm
-        """
-
         # Replay memory
-        # a large batch size seems to make the agent learn too much too fast without new data points
-        # and it seems like this can cause the gradient decent to overshoot
-        # in copter project also had better results with smaller batch sizes
-        # probably the learning rates, gamma, and tau need to be adjusted down as the 
-        # batch size goes up
-        # so when in doubt, use a smaller batch size to see if learning happens, then 
-        # increase to speed up the learning until it breaks, then tuning hyperparameters
         if self.envType == "continousStateAction":
-            self.buffer_size = 10000 # most episodes are around 1000 steps in OpenAI for a complete run 
-            self.batch_size = 256 
+            self.buffer_size = 100000 # most episodes are around 1000 steps in OpenAI for a complete run 
+            self.batch_size = 128 
         elif self.envType == "imageStateContinuousAction":
-            self.buffer_size = 10000 
+            self.buffer_size = 10000 # 100000 in other solution to car racing with DDQN with dropout
             self.batch_size = 64
         else:    
             raise("\nDDPG:__init__: ERROR! unsupported env type!\n")            
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
-        # Algorithm parameters
-        self.gamma = 0.995 #0.99  # discount factor
-        self.tau = 0.005 #0.01   # for soft update of target parameters
+        # Discount factor (percentage to use) for Q_targets_next from the critic model added to the rewards for training
+        self.gamma = 0.995 #0.99  #0.995
+
+        # Actor-Critic local and target soft update ratio of target parameters, off-policy learning algorithm
+        self.useSoftUpdates = True
+        self.tau = 0.005 # 1.0 # 0.005 #0.01
     
         # Exploration Policy (expodential decay based on lifetime steps)
         self.explore_start = 1.0            # exploration probability at start
-        self.explore_stop = 0.001           # minimum exploration probability 
-        self.decay_rate = 0.00001           # exponential decay rate for exploration prob
+        self.explore_stop = 0.01            # minimum exploration probability 
+        self.decay_rate = 0.00001 / self.learnFrequency # exponential decay rate for exploration prob
         self.exploreStep = 0
         self.explore_p = 1.0
 
@@ -601,7 +628,7 @@ class DDPG():
         self.last_state = next_state
 
                 
-    def act(self, state):       
+    def act(self, state, mode="train"):       
                  
         # Ensure that size of next_state as returned from the 
         # environment is increased in according to the action_repeat
@@ -616,21 +643,12 @@ class DDPG():
         
         # Explore or Exploit
         # Use expodentially decaying noise, more consistant results across environments than OU noise
+        # use sinusoid instead, up and down?
         self.explore_p = self.explore_stop + (self.explore_start - self.explore_stop)*np.exp(-self.decay_rate*self.exploreStep) 
-        if self.explore_p > np.random.rand():
-            # Make a random action
+        if self.explore_p > np.random.rand() and mode == "train":
+            # Make a random action if in training mode to explore the environment
             action = self.env.action_space.sample()
-            
-#            if self.envType == "continousStateAction":
-#                state = np.reshape(state, [-1, self.state_size])
-#            elif self.envType == "imageStateContinuousAction":
-#                state = np.expand_dims(state, axis=0)  # for img state space
-#
-#            # make an agent action proportional to explore_p
-#            agentAction = self.actor_local.model.predict(state)[0]                 
-#            randAction = self.env.action_space.sample()
-#            action = agentAction * (1-self.explore_p) + randAction * self.explore_p            
-            
+                       
         else:
             """Returns action(s) for given state(s) as per current policy."""
             if self.envType == "continousStateAction":
@@ -639,9 +657,6 @@ class DDPG():
                 state = np.expand_dims(state, axis=0)  # for img state space
 
             action = self.actor_local.model.predict(state)[0]    
-#            print("action before: ", action)
-#            action = scale_output(action, self.action_range, self.action_low)
-#            print("action after: ", action)           
 
             # Making the actions partially random seems to hurt the agent in finding the right actions
             # probably the correlation between the agent weights and state and actions gets
@@ -674,49 +689,58 @@ class DDPG():
 
         # Learn, if enough samples are available in memory
         # Check step count to avoid loading and unloading the GPU all the time
-        if len(self.memory) > self.batch_size: # and self.stepCount % 1 == 0:
+        if len(self.memory) > self.batch_size and self.stepCount % self.learnFrequency == 0:
 #            print("\t\tlearning on total training step count: ", self.stepCount)
             experiences = self.memory.sample(self.batch_size)
         
             """Update policy and value parameters using given batch of experience tuples."""
             # Convert experience tuples to separate arrays for each element (states, actions, rewards, etc.)
-            states = np.vstack([e.state for e in experiences if e is not None])
             actions = np.array([e.action for e in experiences if e is not None]).astype(np.float32).reshape(-1, self.action_size)
             rewards = np.array([e.reward for e in experiences if e is not None]).astype(np.float32).reshape(-1, 1)
             dones = np.array([e.done for e in experiences if e is not None]).astype(np.uint8).reshape(-1, 1)
-            next_states = np.vstack([e.next_state for e in experiences if e is not None])
    
-    	    # turn the states and next_states into numpy arrays 
-            # this is important to properly stack image states, as vstack won't work properly on multiple dimensions	
+    	    # turn the states and next_states into numpy arrays, this is 
+            # important change from copter DDPG in order to to properly stack
+            # image states, as vstack won't work properly on multiple dimensions	
+#            states = np.vstack([e.state for e in experiences if e is not None])
             states = []
             for e in experiences:
                 states.append(e.state)
     
             states = np.array(states)
 
+#            next_states = np.vstack([e.next_state for e in experiences if e is not None])
             next_states = []
             for e in experiences:
                 next_states.append(e.next_state)
     
             next_states = np.array(next_states)
     
-            # Get predicted next-state actions and Q values from target models               
-            actions_next = self.actor_target.model.predict_on_batch(next_states)
-#            for act in actions_next:
-#                act = scale_output(act, self.action_range, self.action_low)
-            Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
-    
-            # Compute Q targets for current states and train critic model (local)
-            self.Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-            self.critic_local.model.train_on_batch(x=[states, actions], y=self.Q_targets)
+            if self.useSoftUpdates:       
+                # Get predicted next-state actions and Q values from target models    
+                actions_next = self.actor_target.model.predict_on_batch(next_states)
+                Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
+        
+                # Compute Q targets for current states and train critic model (local)
+                self.Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
+                self.critic_local.model.train_on_batch(x=[states, actions], y=self.Q_targets)
+            else: 
+                # Get predicted next-state actions and Q values from local models    
+                actions_next = self.actor_local.model.predict_on_batch(next_states)
+                Q_targets_next = self.critic_local.model.predict_on_batch([next_states, actions_next])
+        
+                # Compute Q targets for current states and train critic model (local)
+                self.Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
+                self.critic_local.model.train_on_batch(x=[states, actions], y=self.Q_targets)
     
             # Train actor model (local)
             self.action_gradients = np.reshape(self.critic_local.get_action_gradients([states, actions, 0]), (-1, self.action_size))
             self.actor_local.train_fn([states, self.action_gradients, 1])  # custom training function
     
             # Soft-update target models
-            self.soft_update(self.critic_local.model, self.critic_target.model)
-            self.soft_update(self.actor_local.model, self.actor_target.model)   
+            if self.useSoftUpdates:       
+                self.soft_update(self.critic_local.model, self.critic_target.model)
+                self.soft_update(self.actor_local.model, self.actor_target.model)   
 
     def soft_update(self, local_model, target_model):
         """Soft update model parameters."""
