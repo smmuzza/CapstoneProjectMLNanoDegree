@@ -8,6 +8,7 @@ Created on Sun May 19 12:55:20 2019
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 
 from agents import discretize as dis
 
@@ -16,7 +17,7 @@ def examine_environment(env):
 
     # Run a random agent
     score = 0
-    for t in range(200):
+    for t in range(100):
         action = env.action_space.sample()
         env.render()
         state, reward, done, _ = env.step(action)
@@ -146,6 +147,36 @@ def plot_scores(scores, rolling_window=50):
     rolling_mean = pd.Series(scores).rolling(rolling_window).mean()
     plt.plot(rolling_mean);
     return rolling_mean
+
+def plot_score_from_file(file_to_read):
+    # Load simulation results from the .csv file
+    results = pd.read_csv(file_to_read)
+    
+    # Total rewards for each episode
+    episode_rewards_mean = results.groupby(['episode'])[['reward']].mean()
+    episode_rewards_sum = results.groupby(['episode'])[['reward']].sum()
+    
+    smoothed_mean = episode_rewards_mean.rolling(25).mean() 
+    smoothed_sum = episode_rewards_sum.rolling(25).mean() 
+    
+    #print(episode_rewards)
+    plt.figure(3)
+    plt.plot(episode_rewards_mean, label='mean rewards')
+    plt.plot(smoothed_mean, label='running mean')
+    plt.legend()
+    axes = plt.gca()
+    axes.set_ylim([-10,10])
+    plt.show()  
+    
+    # plot the sum rewards
+    plt.figure(4)
+    plt.plot(episode_rewards_sum, label='sum rewards')
+    plt.plot(smoothed_sum, label='running mean')
+    plt.legend()
+    axes = plt.gca()
+    axes.set_ylim([-250,250])
+    plt.show()  
+
 
 def plot_q_table(q_table):
     """Visualize max Q-value for each state and corresponding action."""

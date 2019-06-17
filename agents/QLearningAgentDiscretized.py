@@ -56,13 +56,13 @@ class QLearningAgent:
         """Reset exploration rate used when training."""
         self.epsilon = epsilon if epsilon is not None else self.initial_epsilon
 
-    def act(self, state):
+    def act(self, state, mode):
         """Pick next action and update internal Q table (when mode != 'test')."""
         state = self.preprocess_state(state)
 
         # Exploration vs. exploitation
         do_exploration = np.random.uniform(0, 1) < self.epsilon
-        if do_exploration:
+        if do_exploration and mode == "train":
             # Pick a random action
             action = np.random.randint(0, self.action_size)
         else:

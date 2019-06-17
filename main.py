@@ -5,68 +5,65 @@ Created on Fri May 17 21:03:14 2019
 @author: shane
 """
 
-import sys
 import gym
 import numpy as np
 
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# Set plotting options
-#%matplotlib inline
-plt.style.use('ggplot')
 np.set_printoptions(precision=3, linewidth=120)
 
 
 """
-TODO
-
-1. generalize different agents to handle different environments to compare them
-2. try the idea of sleeping the network with a different memory buffer size
-3. try transfer learning between environments (batch norm to help?)
-4. try to generalize agents between different environments
-
-MountainCarContinuous-v0 usually solves within 100-200 episodes
-
-
-"""
-
-"""
 # Create an environment and set random seed
 """
+selectedEnvironment = 6
+env = 0
+envName = 0
 
 # Toy Text - Discrete state and action space
-#env = gym.make('Taxi-v2') # discrete state and action space
+if selectedEnvironment == 0:
+    envName = 'Taxi-v2'
 
 # Classic Control - Continuous State and Discrete Action Spaces
-#env = gym.make('MountainCar-v0') # needs Discretized or better
-#env = gym.make('Acrobot-v1')     # needs Discretized, Tile Encoding or better
-#env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
-
-# Classic Control - Continuous State and Action Spaces
-#env = gym.make('Pendulum-v0') # continuous only
-env = gym.make('MountainCarContinuous-v0') # continuous only
+elif selectedEnvironment == 1: 
+    envName = 'MountainCar-v0' # needs Discretized or better
+elif selectedEnvironment == 2: 
+    envName = 'Acrobot-v1'     # needs Discretized, Tile Encoding or better
+elif selectedEnvironment == 3: 
+    envName = 'CartPole-v1'    # needs Deep Q Learning to do well?
 
 # Box 2D - Continuous State, Discrete Actions
-#env = gym.make('LunarLander-v2') # discrete actions, continuous state
+elif selectedEnvironment == 4: 
+    envName = 'LunarLander-v2' # discrete actions, continuous state
+
+# Classic Control - Continuous State and Action Spaces
+elif selectedEnvironment == 5: 
+    envName = 'Pendulum-v0' # continuous only
+elif selectedEnvironment == 6: 
+    envName = 'MountainCarContinuous-v0' # continuous only
 
 # Box 2D - Continuous State and Action Spaces
-#env = gym.make('LunarLanderContinuous-v2') # continuous only
-#env = gym.make('BipedalWalker-v2')  # continuous only
-#env = gym.make('CarRacing-v0')      #  image input, actions [steer, gas, brake]
+elif selectedEnvironment == 7:
+    envName = 'LunarLanderContinuous-v2' # continuous only
+elif selectedEnvironment == 8: 
+    envName = 'BipedalWalker-v2'  # continuous only
 
-# Atari
-#env = gym.make('MsPacman-v0')
+# Box 2D - Image State and Continuous Action Spaces   
+elif selectedEnvironment == 9: 
+    envName = 'CarRacing-v0'      #  image input, actions [steer, gas, brake]
 
-# Initialize the simulation
-env.seed(505);
+# Initialize the environment
+env = gym.make(envName)
 env.reset()
-state = env.reset()
 
-# Examine the environment
+# Set output file paths based on environment
+file_output_train = envName + '_train.txt'       # file name for saved results
+file_output_test = envName + '_test.txt'       # file name for saved results
+
 from visuals import examine_environment, examine_environment_MountainCar_discretized, examine_environment_Acrobat_tiled
 #examine_environment(env)
 
+from datetime import datetime
+FORMAT = '%Y%m%d%H%M%S'
+file_output_train = datetime.now().strftime(FORMAT) + file_output_train
 
 """
 # Create Agent
@@ -77,13 +74,13 @@ if selectedAgent == 0:
     # create the agent discretized state space Q Learning
     from agents import QLearningAgentDiscretized as qlad
     agent = qlad.QLearningAgent(env)
-    examine_environment_MountainCar_discretized(env)
+#    examine_environment_MountainCar_discretized(env)
 
 if selectedAgent == 1:
     # create the agent for tiled state space Q Learning
     from agents import QLearningAgentDiscretizedTiles as qlat
     agent = qlat.QLearningAgentDisTiles(env)
-    #examine_environment_Acrobat_tiled(env, n_bins)
+#    examine_environment_Acrobat_tiled(env, n_bins)
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     print("env.observation_space.shape[0]", state_size)
@@ -97,63 +94,27 @@ if selectedAgent == 2:
     print("task.observation_space: ", obsSpace)
 
 
-
 """
 # run the simulation
 """
-import run as sim
-num_episodes=1000
-score = 0
-file_output_train = 'ddpg_agent_openai_gym.txt'       # file name for saved results
-scores = sim.run(agent, env, num_episodes, mode='train', file_output=file_output_train)
+import interact as sim
+num_episodes=200
+sim.interact(agent, env, num_episodes, mode='train', file_output=file_output_train)
 
 """
-# Plot scores obtained per episode
+# Plot training scores obtained per episode
 """
-from visuals import plot_scores, plot_q_table
-rolling_mean = plot_scores(scores)
+from visuals import plot_scores, plot_q_table, plot_score_from_file
+plot_score_from_file(file_output_train)
+#plot_q_table(agent.q_table)
 
-# Load simulation results from the .csv file
-import pandas as pd
-import matplotlib.pyplot as plt
-# Load simulation results from the .csv file
-results = pd.read_csv(file_output_train)
-
-# Total rewards for each episode
-episode_rewards_mean = results.groupby(['episode'])[['reward']].mean()
-episode_rewards_sum = results.groupby(['episode'])[['reward']].sum()
-
-smoothed_mean = episode_rewards_mean.rolling(25).mean() 
-smoothed_sum = episode_rewards_sum.rolling(25).mean() 
-
-#print(episode_rewards)
-plt.figure(3)
-plt.plot(episode_rewards_mean, label='mean rewards')
-plt.plot(smoothed_mean, label='running mean')
-plt.legend()
-axes = plt.gca()
-axes.set_ylim([-10,10])
-plt.show()  
-
-# plot the sum rewards
-plt.figure(4)
-plt.plot(episode_rewards_sum, label='sum rewards')
-plt.plot(smoothed_sum, label='running mean')
-plt.legend()
-axes = plt.gca()
-axes.set_ylim([-150,150])
-plt.show()  
 
 """
 # Run in test mode and analyze scores obtained
 """
 print("[TEST] Training Done, now running tests...")
-file_output_test = 'ddpg_agent_openai_gym_test.txt'       # file name for saved results
-test_scores = sim.run(agent, env, num_episodes=1, mode='test', file_output=file_output_test)
-print("[TEST] Completed {} episodes with avg. score = {}".format(len(test_scores), np.mean(test_scores)))
-_ = plot_scores(test_scores)
-
-#plot_q_table(agent.q_table)
+test_scores = sim.interact(agent, env, num_episodes=1, mode='test', file_output=file_output_test)
+plot_score_from_file(file_output_test)
 
 """
 # Watch Agent

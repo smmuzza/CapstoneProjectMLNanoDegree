@@ -158,7 +158,7 @@ class QLearningAgentDisTiles:
         """Reset exploration rate used when training."""
         self.epsilon = epsilon if epsilon is not None else self.initial_epsilon
 
-    def act(self, state):
+    def act(self, state, mode):
         """Pick next action """
         Q_s = [self.tq.get(state, action) for action in range(self.action_size)]
         # Pick the best action from Q table
@@ -166,7 +166,7 @@ class QLearningAgentDisTiles:
 
         # Exploration vs. exploitation
         do_exploration = np.random.uniform(0, 1) < self.epsilon
-        if do_exploration:
+        if do_exploration and mode == "train":
             # Pick a random action
             action = np.random.randint(0, self.action_size)
         else:
