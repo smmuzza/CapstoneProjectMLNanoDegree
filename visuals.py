@@ -46,19 +46,7 @@ def examine_environment(env):
 
 # Initial Testing of environment and discretization
 def examine_environment_MountainCar_discretized(env):
-
-    # Run a random agent
-    score = 0
-    for t in range(200):
-        action = env.action_space.sample()
-        env.render()
-        state, reward, done, _ = env.step(action)
-        score += reward
-        if done:
-            break 
-    print('Final score:', score)
-    env.close()
-    
+  
     # Explore state (observation) space
     print("State space:", env.observation_space)
     print("- low:", env.observation_space.low)

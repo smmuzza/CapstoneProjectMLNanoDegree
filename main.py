@@ -55,15 +55,17 @@ env = gym.make(envName)
 env.reset()
 
 # Set output file paths based on environment
-file_output_train = envName + '_train.txt'       # file name for saved results
-file_output_test = envName + '_test.txt'       # file name for saved results
-
 from visuals import examine_environment, examine_environment_MountainCar_discretized, examine_environment_Acrobat_tiled
 #examine_environment(env)
 
 from datetime import datetime
 FORMAT = '%Y%m%d%H%M%S'
+file_output_train = envName + '_train.txt'       # file name for saved results
+file_output_test = envName + '_test.txt'       # file name for saved results
 file_output_train = datetime.now().strftime(FORMAT) + file_output_train
+
+print('-----------------------------------------------------------')
+print('New Experiment, training output file name: ', file_output_train)
 
 """
 # Create Agent
@@ -72,42 +74,66 @@ agent = 0
 selectedAgent = 2
 if selectedAgent == 0:
     # create the agent discretized state space Q Learning
+    state_size = env.observation_space.shape[0]
+    action_size = env.action_space.n
+    print("env.observation_space.shape[0]", state_size)
+    print("env.action_space", action_size)
     from agents import QLearningAgentDiscretized as qlad
     agent = qlad.QLearningAgent(env)
 #    examine_environment_MountainCar_discretized(env)
 
 if selectedAgent == 1:
     # create the agent for tiled state space Q Learning
-    from agents import QLearningAgentDiscretizedTiles as qlat
-    agent = qlat.QLearningAgentDisTiles(env)
-#    examine_environment_Acrobat_tiled(env, n_bins)
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     print("env.observation_space.shape[0]", state_size)
     print("env.action_space", action_size)
+    from agents import QLearningAgentDiscretizedTiles as qlat
+    agent = qlat.QLearningAgentDisTiles(env)
+#    examine_environment_Acrobat_tiled(env, n_bins)
 
 if selectedAgent == 2:
     # Create DDPG network agent
+    obsSpace = env.observation_space.shape
+    print("env.observation_space: ", obsSpace)
     from agents.DDPG import DDPG
     agent = DDPG(env, "continousStateAction")  # continousStateAction imageStateContinuousAction
+
+if selectedAgent == 3:
+    # Create DDPG network agent
     obsSpace = env.observation_space.shape
-    print("task.observation_space: ", obsSpace)
-
-
+    print("env.observation_space: ", obsSpace)
+    from agents.DDPG import DDPG
+    agent = DDPG(env, "imageStateContinuousAction")  # continousStateAction imageStateContinuousAction
+    
 """
 # run the simulation
 """
 import interact as sim
-num_episodes=200
+num_episodes=250
 sim.interact(agent, env, num_episodes, mode='train', file_output=file_output_train)
 
 """
 # Plot training scores obtained per episode
 """
-from visuals import plot_scores, plot_q_table, plot_score_from_file
+from visuals import plot_q_table, plot_score_from_file
 plot_score_from_file(file_output_train)
-#plot_q_table(agent.q_table)
+if selectedAgent == 0 or selectedAgent == 1:
+    plot_q_table(agent.q_table)
 
+
+"""
+# save model and architecture to single file
+# https://machinelearningmastery.com/save-load-keras-deep-learning-models/
+"""
+if selectedAgent == 2 or selectedAgent == 3:
+    import sys
+    sys.setrecursionlimit(1000000) # need to be big enough to handle whole weight list
+    agent.actor_local.model.save(file_output_train+"actor_local.h5")
+    agent.actor_target.model.save(file_output_train+"actor_target.h5")
+    agent.critic_local.model.save(file_output_train+"critic_local.h5")
+    agent.critic_target.model.save(file_output_train+"critic_target.h5")
+    print("Saved model to disk")
 
 """
 # Run in test mode and analyze scores obtained
