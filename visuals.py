@@ -141,21 +141,21 @@ def plot_score_from_file(file_to_read):
     results = pd.read_csv(file_to_read)
     
     # Total rewards for each episode
-    episode_rewards_mean = results.groupby(['episode'])[['reward']].mean()
+#    episode_rewards_mean = results.groupby(['episode'])[['reward']].mean()
     episode_rewards_sum = results.groupby(['episode'])[['reward']].sum()
     
-    smoothed_mean = episode_rewards_mean.rolling(25).mean() 
+#    smoothed_mean = episode_rewards_mean.rolling(25).mean() 
     smoothed_sum = episode_rewards_sum.rolling(25).mean() 
     
-    #print(episode_rewards)
-    plt.figure(3)
-    plt.plot(episode_rewards_mean, label='mean rewards')
-    plt.plot(smoothed_mean, label='running mean')
-    plt.legend()
-    axes = plt.gca()
-    axes.set_ylim([-10,10])
-    plt.show()  
-    
+#    #print(episode_rewards)
+#    plt.figure(3)
+#    plt.plot(episode_rewards_mean, label='mean rewards')
+#    plt.plot(smoothed_mean, label='running mean')
+#    plt.legend()
+#    axes = plt.gca()
+#    axes.set_ylim([-5,5])
+#    plt.show()  
+#    
     # plot the sum rewards
     plt.figure(4)
     plt.plot(episode_rewards_sum, label='sum rewards')

@@ -82,19 +82,42 @@ class Actor:
             # Add final output layer with sigmoid activation
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions', kernel_initializer=kernel_initializer)(net)
 
-        elif self.netArch =="UnifromLayers":
+        elif self.netArch =="UniformLayers":
             # Define input layer (states)
             states = keras.layers.Input(shape=(self.state_size,), name='states')
 
+            layerSize = 300
+            print("UniformLaters: layerSize", layerSize)
             # Define input layer (states)
-            kernel_initializer = keras.initializers.glorot_normal(seed=None)
+#            kernel_initializer = keras.initializers.glorot_normal(seed=None)
        
             # Add hidden layers
-            net = keras.layers.Dense(units=500, activation='relu', kernel_initializer=kernel_initializer)(states)
-            net = keras.layers.Dense(units=500, activation='relu', kernel_initializer=kernel_initializer)(net)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(states)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(net)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(net)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(net)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(net)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(net)
     
             # Add final output layer with sigmoid activation
-            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions', kernel_initializer=kernel_initializer)(net)
+            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
+        
+        elif self.netArch == "Hausknecht":
+
+            # Define input layer (states)
+            states = keras.layers.Input(shape=(self.state_size,), name='states')
+      
+            # Add hidden layers
+#            net = keras.layers.Dense(units=32, activation='relu')(net)
+#            net = keras.layers.Dense(units=64, activation='relu')(net)
+            net = keras.layers.Dense(units=1024, activation='relu')(states)
+            net = keras.layers.Dense(units=512, activation='relu')(net)
+            net = keras.layers.Dense(units=256, activation='relu')(net)
+            net = keras.layers.Dense(units=128, activation='relu')(net)
+    
+            # Add final output layer with sigmoid activation
+            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
+
         
         elif self.netArch == "QuadCopter":
             # Define input layer (states)
@@ -121,25 +144,21 @@ class Actor:
 
         elif self.netArch == "QuadCopterBig":
             
-            bigUp = 2
+            bigUp = 2 # option kernel_regularizer=regularizers.l2(0.01)
             
             # Define input layer (states)
             states = keras.layers.Input(shape=(self.state_size,), name='states')
    
-            net = layers.Dense(units=64 * bigUp, activation='relu', \
-                   kernel_regularizer=regularizers.l2(0.001))(states)
+            net = layers.Dense(units=64 * bigUp, activation='relu')(states)
             net = layers.Dropout(self.dropout_rate)(net)
 
-            net = layers.Dense(units=128 * bigUp, activation='relu', \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=128 * bigUp, activation='relu')(net)
             net = layers.Dropout(self.dropout_rate)(net)
 
-            net = layers.Dense(units=128 * bigUp, activation='relu', \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=128 * bigUp, activation='relu')(net)
             net = layers.Dropout(self.dropout_rate)(net)
 
-            net = layers.Dense(units=64 * bigUp, activation='relu', \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=64 * bigUp, activation='relu')(net)
             net = layers.Dropout(self.dropout_rate)(net)
 
             # Add final output layer with sigmoid activation
@@ -202,26 +221,23 @@ class Actor:
             # doesn't seem to be strong evidence that it trains faster, even with a 4x 
             # learning rate
             
+            bigUp = 2            
             # Define input layer (states)
             states = keras.layers.Input(shape=(self.state_size,), name='states')
    
-            net = layers.Dense(units=64, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(states)
+            net = layers.Dense(units=64 * bigUp, use_bias=False, activation=None)(states)
             net = layers.BatchNormalization()(net) # (SMM) seems to help smooth results
             net = layers.Activation("relu")(net)
 
-            net = layers.Dense(units=128, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=128 * bigUp, use_bias=False, activation=None)(net)
             net = layers.BatchNormalization()(net) # (SMM) seems to help smooth results
             net = layers.Activation("relu")(net)
 
-            net = layers.Dense(units=128, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=128 * bigUp, use_bias=False, activation=None)(net)
             net = layers.BatchNormalization()(net) # (SMM) seems to help smooth results
             net = layers.Activation("relu")(net)
 
-            net = layers.Dense(units=64, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=64 * bigUp, use_bias=False, activation=None)(net)
             net = layers.BatchNormalization()(net) # (SMM) seems to help smooth results
             net = layers.Activation("relu")(net)
 
@@ -251,14 +267,16 @@ class Actor:
         # (using a sigmoid activation function). So, we add another layer that scales each
         # output to the desired range for each action dimension. This produces a deterministic
         # action for any given state vector.
-        actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low, name='actions')(raw_actions)
-#            actions = keras.layers.Lambda(lambda x: x, name='actions')(raw_actions)
+#        actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low, name='actions')(raw_actions)
+#        actions = keras.layers.Lambda(lambda x: x, name='actions')(raw_actions)
+        actions = raw_actions
+        self.model = keras.models.Model(inputs=states, outputs=actions)
 #            actions = keras.layers.Lambda(scale_output, name='actions')(raw_actions)
 #            actions = keras.layers.Lambda(scale_putsParallel, scale_putsParallel_shape, name='actions')(raw_actions)
            # SUSPECT THAT LAMBDA IS NOT SCALING PROPERLY FOR MULTI-D ACTIONS WITH DIFFERENT RANGES
 
         # Create Keras model
-        self.model = keras.models.Model(inputs=states, outputs=actions)
+#        self.model = keras.models.Model(inputs=states, outputs=actions)
 
         # Define loss function using action value (Q value) gradients
         # These gradients will need to be computed using the critic model, and
@@ -323,29 +341,52 @@ class Critic:
             # Add more layers to the combined network if needed
             net = keras.layers.Dense(units=300, activation='elu', kernel_initializer=kernel_initializer)(net)
         
-        elif self.netArch =="UnifromLayers":
+        elif self.netArch =="UniformLayers":
             # Define input layers. The critic model needs to map (state, action) pairs to
             # their Q-values. This is reflected in the following input layers.
             states = keras.layers.Input(shape=(self.state_size,), name='states')
             actions = keras.layers.Input(shape=(self.action_size,), name='actions')
     
             # Kernel initializer Xavier
-            kernel_initializer = keras.initializers.glorot_normal(seed=None)
+#            kernel_initializer = keras.initializers.glorot_normal(seed=None)
     
+            layerSize = 300
+            print("UniformLaters: layerSize", layerSize)
+            
             # Add hidden layer(s) for state pathway
-            net_states = keras.layers.Dense(units=500, activation='relu', kernel_initializer=kernel_initializer)(states)
+            net_states = keras.layers.Dense(units=layerSize, activation='relu')(states)
+            net_states = keras.layers.Dense(units=layerSize, activation='relu')(net_states)
+            net_states = keras.layers.Dense(units=layerSize, activation='relu')(net_states)
     
             # Add hidden layer(s) for action pathway
-            net_actions = keras.layers.Dense(units=500, activation='relu', kernel_initializer=kernel_initializer)(actions)
+            net_actions = keras.layers.Dense(units=layerSize, activation='relu')(actions)
+            net_actions = keras.layers.Dense(units=layerSize, activation='relu')(net_actions)
+            net_actions = keras.layers.Dense(units=layerSize, activation='relu')(net_actions)
     
             # Combine state and action pathways. The two layers can first be processed via separate
             # "pathways" (mini sub-networks), but eventually need to be combined.
             net = keras.layers.Add()([net_states, net_actions])
     
             # Add more layers to the combined network if needed
-            net = keras.layers.Dense(units=500, activation='relu', kernel_initializer=kernel_initializer)(net)
+            net = keras.layers.Dense(units=layerSize, activation='relu')(net)
         
-        
+        elif self.netArch == "Hausknecht":
+            
+            # Define input layers. The critic model needs to map (state, action) pairs to
+            # their Q-values. This is reflected in the following input layers.
+            states = keras.layers.Input(shape=(self.state_size,), name='states')
+            actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+    
+            # Combine state and action pathways. The two layers can first be processed via separate
+            # "pathways" (mini sub-networks), but eventually need to be combined.
+            net = keras.layers.Add()([states, actions])
+     
+            # Add hidden layer(s) for state pathway
+            net = keras.layers.Dense(units=1024, activation='relu')(net)
+            net = keras.layers.Dense(units=512, activation='relu')(net)
+            net = keras.layers.Dense(units=256, activation='relu')(net)
+            net = keras.layers.Dense(units=128, activation='relu')(net)   
+                 
         elif self.netArch == "QuadCopter":
             
             # Define input layers. The critic model needs to map (state, action) pairs to
@@ -477,32 +518,30 @@ class Critic:
             states = keras.layers.Input(shape=(self.state_size,), name='states')
             actions = keras.layers.Input(shape=(self.action_size,), name='actions')
             
+            # takes longer to get good results than the regular sizes copter network
+            bigUp = 2 
+            
             # Add hidden layer(s) for state pathway
-            net_states = layers.Dense(units=64, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(states)
+            net_states = layers.Dense(units=64 * bigUp, use_bias=False)(states)
             net_states = layers.BatchNormalization()(net_states) 
             net_states = layers.Activation("relu")(net_states)
             
-            net_states = layers.Dense(units=128, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(net_states)
+            net_states = layers.Dense(units=128 * bigUp, use_bias=False)(net_states)
             net_states = layers.BatchNormalization()(net_states)
             net_states = layers.Activation("relu")(net_states)
        
             # Add hidden layer(s) for action pathway
-            net_actions = layers.Dense(units=64, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(actions)
+            net_actions = layers.Dense(units=64 * bigUp, use_bias=False)(actions)
             net_actions = layers.BatchNormalization()(net_actions)
             net_actions = layers.Activation("relu")(net_actions)
            
-            net_actions = layers.Dense(units=128, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(net_actions)
+            net_actions = layers.Dense(units=128 * bigUp, use_bias=False)(net_actions)
             net_actions = layers.BatchNormalization()(net_actions)
             net_actions = layers.Activation("relu")(net_actions)
 
             # Combine state and action pathways
             net = layers.Add()([net_states, net_actions])
-            net = layers.Dense(units=128, use_bias=False, activation=None, \
-                   kernel_regularizer=regularizers.l2(0.001))(net)
+            net = layers.Dense(units=128 * bigUp, use_bias=False)(net)
             net = layers.BatchNormalization()(net) #(SMM) 
             net = layers.Activation("relu")(net)
     
@@ -574,6 +613,10 @@ def unit_image(image):
 def scale_output(x, action_range, action_low):
     temp = (np.array(x) * np.array(action_range)) + np.array(action_low)
     return temp  
+
+def descale_output(x, action_range, action_low):
+    temp = (np.array(x) / np.array(action_range)) - np.array(action_low)
+    return temp
            
     
 class DDPG():
@@ -647,11 +690,12 @@ class DDPG():
                learning rate 0.0001, explore decay 0.00001, action repeat 1
             3. 50 episodes (stable solution) with batch size/buffer 256/10,000, gamma/tau .995/1.0
                learning rate 0.0001, explore decay 0.00001, action repeat 1, *no soft update*
-            4. ~700 episodes (converging, but not solution) with batch size/buffer 256/10000, gamma/tau .995/1.0
+            4. ~700 episodes (converging, but no solution) with batch size/buffer 256/10000, gamma/tau .995/1.0
                learning rate 0.0001, explore decay 0.00001, action repeat 10, *no soft update*
                perhaps the explore rate is too low for the number of episodes?
             5. ~204 episodes (no solution) with batch size/buffer 256/10,000, gamma/tau .9/1.0
                learning rate 0.0001, explore decay 0.00001, action repeat 1, *no soft update*
+            
             6. 60 episodes (stable solution) with batch size/buffer 128/10,000, gamma/tau .995/.005
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update
             7. 110 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .995/.005
@@ -659,6 +703,7 @@ class DDPG():
             8. 82 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .995/.005
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 
                *remove L2 norm of actor network - seems to help*
+            
             9. 2x experiments, 104/115  episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .995/.005
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 
             10. 2x experiments, ~150 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .995/.005
@@ -668,7 +713,8 @@ class DDPG():
             12. 2x experiments, 160/310 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
                learning rate 0.00001, explore decay 0.00001, action repeat 1, with soft update,  adam with amsgrad
             13. 2x experiments, 40/70 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
-               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 0.1 Dropout
+            
             14. 200 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .995/.005
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 
                *remove L2 norm of actor network*, 128 instead of 64 final crtiic hidden layer plus NO dropout
@@ -676,6 +722,23 @@ class DDPG():
                learning rate 0.0001, explore decay 0.00001, action repeat 1, learn freq 10, batch norm
             16. 2x experiments, 40/95 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT
+
+            17. 1x experiments, 250 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .99/.01,
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, 0.001 L2 on actor/critic
+            18. 1x experiments, 50 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01,
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, NO 0.001 L2 on actor/critic
+            19. 1x experiments, 65 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01,
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, NO 0.001 L2 on actor/critic
+
+            20. 1x experiments, ~150 episodes (no solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, NO 0.001 L2 on actor/critic
+            21. 1x experiments, 85 episodes (stable solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 0.2 DROPOUT, NO 0.001 L2 on actor/critic
+
+            22. 1x experiments, xx episodes (xx solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
+               learning rate 0.001, explore decay 0.00001, action repeat 1, with soft update, 0.2 DROPOUT, NO 0.001 L2 on actor/critic
+            23. 1x experiments, xx episodes (xx solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
+               learning rate 0.00001, explore decay 0.00001, action repeat 1, with soft update, 0.2 DROPOUT, NO 0.001 L2 on actor/critic
              
 
         solve mt climber with copter MAX network
@@ -687,7 +750,8 @@ class DDPG():
                small batch seems to help convergence (double batch size is like doubling the learning rate?)
                bigup 3 (big network size, GPU seems fine)
             3. 60 episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
-               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 0.1 dropout
+            
             4. experiments, 140 episodes (stable solution) with batch size/buffer 64/100,000, gamma/tau .99/.01
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, no dropout
             5. experiments, 220 episodes (stable solution) with batch size/buffer 64/100,000, gamma/tau .99/.01
@@ -710,8 +774,25 @@ class DDPG():
 
 
         solve mt climber with uniform layers network
-            1. 2x experiments, x/x episodes (stable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
-               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT
+            2*100 neurons
+            1. 1x experiments, 300 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, no Xavier init
+            
+            2*200 neurons
+            1. 1x experiments, 300 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, no Xavier init
+
+            5*300 neurons
+            1. 1x experiments, 300 episodes (unstable solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, no Xavier init
+
+        
+            2*500 neurons
+            1. 2x experiments, 250 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, Xavier init
+            1. 1x experiments, 250 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .99/.01
+               learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, NO DROPOUT, no Xavier init
+               
 
 
         try sinusoidal explore rates
@@ -737,11 +818,12 @@ class DDPG():
         self.state_size = env.observation_space.shape[0] * self.action_repeat
 
         # select network based on enviromnet type
-        self.learningRate = 0.0001  # 0.00025 Atari paper learning rate
+        self.learningRate = 0.0001  # 0.00025 Atari paper learning rate, 0.0000625 Rainbow learning rate
         self.learnFrequency = 1 # how many steps per training
-        self.dropoutRate = 0.0
-        # QuadCopter, QuadCopterBig, QuadCopterMax, QuadCopterBigELU, QuadCopterBigNoDropout, QuadCopterBatchNorm, Lillicrap
-        network_arch = "UnifromLayers"
+        self.dropoutRate = 0.2
+        # QuadCopter, QuadCopterBig, QuadCopterMax, QuadCopterBigELU, QuadCopterBigNoDropout, QuadCopterBatchNorm, 
+        # Lillicrap, Hausknecht
+        network_arch = "QuadCopterBig"
         if envType == "imageStateContinuousAction":
             network_arch = "imageInputV1"
 
@@ -761,7 +843,7 @@ class DDPG():
 
         # Replay memory
         if self.envType == "continousStateAction":
-            self.buffer_size = 100000 # most episodes are around 1000 steps in OpenAI for a complete run 
+            self.buffer_size = 1000000 # 1,000,000 is standard. Most episodes are around 1000 steps in OpenAI for a complete run 
             self.batch_size = 128 
         elif self.envType == "imageStateContinuousAction":
             self.buffer_size = 10000 # 100000 in other solution to car racing with DDQN with dropout
@@ -778,9 +860,9 @@ class DDPG():
         self.tau = 0.01 # 1.0 # 0.005 #0.01, percentage of local weights to put into the target network
     
         # Exploration Policy (expodential decay based on lifetime steps)
-        self.explore_start = 1.0            # exploration probability at start
-        self.explore_stop = 0.01            # minimum exploration probability 
-        self.explore_decay_rate = 0.00001 / self.learnFrequency # exponential decay rate for exploration prob
+        self.explore_start = 0.0            # exploration probability at start
+        self.explore_stop = 0.00            # minimum exploration probability 
+        self.explore_decay_rate = 0.00001   # exponential decay rate for exploration prob
         self.exploreStep = 0
         self.explore_p = 1.0
 
@@ -859,7 +941,7 @@ class DDPG():
             state = unit_image(state)
        
         # return a random action if memory is not filled (inital network weights)
-        if len(self.memory) < self.batch_size * 5: # batch_size, fill buffer_size before training to stabilize training process??
+        if len(self.memory) < self.batch_size * 100 * self.action_size * self.action_size: # batch_size, fill buffer_size before training to stabilize training process??
             return self.env.action_space.sample()
         
         # Explore or Exploit
@@ -880,7 +962,8 @@ class DDPG():
             elif self.envType == "imageStateContinuousAction":
                 state = np.expand_dims(state, axis=0)  # for img state space
 
-            action = self.actor_local.model.predict(state)[0]    
+            action = self.actor_local.model.predict(state)[0]  
+            action = scale_output(action, self.action_range, self.action_low)
 
             # Making the actions partially random seems to hurt the agent in finding the right actions
             # probably the correlation between the agent weights and state and actions gets
@@ -913,7 +996,7 @@ class DDPG():
 
         # Learn, if enough samples are available in memory
         # Check step count to avoid loading and unloading the GPU all the time
-        if len(self.memory) > self.batch_size and self.stepCount % self.learnFrequency == 0:
+        if len(self.memory) > self.batch_size * 100 and self.stepCount % self.learnFrequency == 0:
 #            print("\t\tlearning on total training step count: ", self.stepCount)
             experiences = self.memory.sample(self.batch_size)
         
@@ -943,6 +1026,9 @@ class DDPG():
             if self.useSoftUpdates:       
                 # Get predicted next-state actions and Q values from target models    
                 actions_next = self.actor_target.model.predict_on_batch(next_states)
+                for a in actions_next: # scale output to match env ranges
+                    a = scale_output(a, self.action_range, self.action_low)
+
                 Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
         
                 # Compute Q targets for current states and train critic model (local)
@@ -951,6 +1037,9 @@ class DDPG():
             else: 
                 # Get predicted next-state actions and Q values from local models    
                 actions_next = self.actor_local.model.predict_on_batch(next_states)
+                for a in actions_next: # scale output to match env ranges
+                    a = scale_output(a, self.action_range, self.action_low)
+
                 Q_targets_next = self.critic_local.model.predict_on_batch([next_states, actions_next])
         
                 # Compute Q targets for current states and train critic model (local)

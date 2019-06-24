@@ -13,7 +13,11 @@ import datetime
 
 from visuals import plot_scores
 
-def interact(agent, env, num_episodes=20000, mode='train', file_output="results.txt"):
+def scale_output(x, action_range, action_low):
+    temp = (np.array(x) * np.array(action_range)) + np.array(action_low)
+    return temp  
+
+def interact(agent, env, num_episodes=20000, mode='train', file_output="results.txt", renderSkip=25):
     """Run agent in given reinforcement learning environment and return scores."""
     
     # Save simulation results to a CSV file.
@@ -49,6 +53,7 @@ def interact(agent, env, num_episodes=20000, mode='train', file_output="results.
                               
                 action = agent.act(state, mode)
                 state, reward, done, info = env.step(action)
+#                state, reward, done, info = env.step(scale_output(action, agent.action_range, agent.action_low))
                 
                 if mode == 'train':
                     agent.learn(action, reward, state, done)
@@ -56,7 +61,7 @@ def interact(agent, env, num_episodes=20000, mode='train', file_output="results.
                 agent.step(state)
     
                 # render event 10 steps
-                if(episode_steps % 50 == 0): # and mode != 'train':
+                if(episode_steps % renderSkip == 0): # and mode != 'train':
                     env.render()
                     print("\tstep: ", episode_steps, ", action:", action)
     

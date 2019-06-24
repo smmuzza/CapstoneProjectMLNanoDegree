@@ -14,7 +14,7 @@ np.set_printoptions(precision=3, linewidth=120)
 """
 # Create an environment and set random seed
 """
-selectedEnvironment = 6
+selectedEnvironment = 9
 env = 0
 envName = 0
 
@@ -71,7 +71,7 @@ print('New Experiment, training output file name: ', file_output_train)
 # Create Agent
 """
 agent = 0
-selectedAgent = 2
+selectedAgent = 3
 if selectedAgent == 0:
     # create the agent discretized state space Q Learning
     state_size = env.observation_space.shape[0]
@@ -110,7 +110,7 @@ if selectedAgent == 3:
 # run the simulation
 """
 import interact as sim
-num_episodes=250
+num_episodes=10000
 sim.interact(agent, env, num_episodes, mode='train', file_output=file_output_train)
 
 """
@@ -149,7 +149,7 @@ state = env.reset()
 score = 0
 for t in range(5000):
     # get action from agent
-    action = agent.act(state)
+    action = agent.act(state, mode='test')
        
     # show environment and step it forward
     env.render()
