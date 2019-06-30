@@ -148,6 +148,10 @@ class Actor:
             
             # Define input layer (states)
             states = keras.layers.Input(shape=(self.state_size,), name='states')
+
+#            noiseStd = 0.1
+#            print("actor noiseStd: ", noiseStd)
+#            net = keras.layers.GaussianNoise(noiseStd)(states)
    
             net = layers.Dense(units=64 * bigUp, activation='relu')(states)
             net = layers.Dropout(self.dropout_rate)(net)
@@ -243,22 +247,51 @@ class Actor:
 
             # Add final output layer with sigmoid activation
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
-        
+            
+        elif self.netArch == "QuadCopterBatchNormInput":
+            # This network seems to produce more intelligable actions with less episodes, 
+            # but is also significatly faster than without batch normalization
+            # doesn't seem to be strong evidence that it trains faster, even with a 4x 
+            # learning rate
+            
+            bigUp = 2            
+            # Define input layer (states)
+            states = keras.layers.Input(shape=(self.state_size,), name='states')
+
+            net = layers.BatchNormalization()(states) # (SMM) seems to help smooth results
+   
+            net = layers.Dense(units=64 * bigUp, activation='relu')(net)
+            net = layers.Dropout(self.dropout_rate)(net)
+
+            net = layers.Dense(units=128 * bigUp, activation='relu')(net)
+            net = layers.Dropout(self.dropout_rate)(net)
+
+            net = layers.Dense(units=128 * bigUp, activation='relu')(net)
+            net = layers.Dropout(self.dropout_rate)(net)
+
+            net = layers.Dense(units=64 * bigUp, activation='relu')(net)
+            net = layers.Dropout(self.dropout_rate)(net)
+
+            # Add final output layer with sigmoid activation
+            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
+                
         elif self.netArch == "imageInputV1":     
 
             # for img state space
             states = keras.layers.Input(shape=(96, 96, 3), name='states')
             net = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
-#            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
             net = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net)
-#            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
             net = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net)
-#            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
             net = keras.layers.Flatten()(net)
             net = keras.layers.Dense(units=512, activation='relu')(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
+            net = keras.layers.Dense(units=256, activation='relu')(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
 
@@ -422,7 +455,11 @@ class Critic:
             states = keras.layers.Input(shape=(self.state_size,), name='states')
             actions = keras.layers.Input(shape=(self.action_size,), name='actions')
             
+#            noiseStd = 0.1
+#            print("critic noiseStd: ", noiseStd)
+            
             # Add hidden layer(s) for state pathway
+#            net_states = keras.layers.GaussianNoise(noiseStd)(states)
             net_states = layers.Dense(units=64 * bigUp, activation='relu')(states)
             net_states = layers.Dropout(self.dropout_rate)(net_states)
             
@@ -430,6 +467,7 @@ class Critic:
             net_states = layers.Dropout(self.dropout_rate)(net_states)
        
             # Add hidden layer(s) for action pathway
+#            net_actions = keras.layers.GaussianNoise(noiseStd)(actions)
             net_actions = layers.Dense(units=64 * bigUp, activation='relu')(actions)
             net_actions = layers.Dropout(self.dropout_rate)(net_actions)    
         
@@ -544,6 +582,35 @@ class Critic:
             net = layers.Dense(units=128 * bigUp, use_bias=False)(net)
             net = layers.BatchNormalization()(net) #(SMM) 
             net = layers.Activation("relu")(net)
+
+        elif self.netArch == "QuadCopterBatchNormInput":
+            # Define input layers. The critic model needs to map (state, action) pairs to
+            # their Q-values. This is reflected in the following input layers.
+            states = keras.layers.Input(shape=(self.state_size,), name='states')
+            actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+            
+            # takes longer to get good results than the regular sizes copter network
+            bigUp = 2 
+            
+            # Add hidden layer(s) for state pathway
+            net_states = layers.BatchNormalization()(states)
+            net_states = layers.Dense(units=64 * bigUp, activation='relu')(net_states)
+            net_states = layers.Dropout(self.dropout_rate)(net_states)
+            
+            net_states = layers.Dense(units=128 * bigUp, activation='relu')(net_states)
+            net_states = layers.Dropout(self.dropout_rate)(net_states)
+       
+            # Add hidden layer(s) for action pathway
+            net_actions = layers.BatchNormalization()(actions)
+            net_actions = layers.Dense(units=64 * bigUp, activation='relu')(actions)
+            net_actions = layers.Dropout(self.dropout_rate)(net_actions)    
+        
+            net_actions = layers.Dense(units=128 * bigUp, activation='relu')(net_actions)
+            net_actions = layers.Dropout(self.dropout_rate)(net_actions)
+
+            # Combine state and action pathways
+            net = layers.Add()([net_states, net_actions])
+            net = layers.Dense(units=128 * bigUp, activation='relu')(net)
     
         elif self.netArch == "imageInputV1":     
             # for img state space
@@ -553,13 +620,13 @@ class Critic:
     
             states = keras.layers.Input(shape=(96, 96, 3), name='states')
             net_states = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
-#            net_states = keras.layers.MaxPooling2D(pool_size=2)(states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
             net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
             net_states = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net_states)
-#            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
             net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
             net_states = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net_states)
-#            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
             net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
             net_states = keras.layers.Flatten()(net_states)
             net_states = keras.layers.Dense(units=512, activation='relu')(net_states)
@@ -568,8 +635,8 @@ class Critic:
             net = keras.layers.Add()([net_states, net_actions])
     
             # Add more layers to the combined network if needed
-#            net = keras.layers.Dense(units=256, activation='relu')(net)
-#            net = keras.layers.Dropout(self.dropout_rate)(net)
+            net = keras.layers.Dense(units=256, activation='relu')(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
              
 
         # Add final output layer to produce action values (Q values). The final output
@@ -735,11 +802,9 @@ class DDPG():
             21. 1x experiments, 85 episodes (stable solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
                learning rate 0.0001, explore decay 0.00001, action repeat 1, with soft update, 0.2 DROPOUT, NO 0.001 L2 on actor/critic
 
-            22. 1x experiments, xx episodes (xx solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
+            22. 1x experiments, 20 episodes (stable solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
                learning rate 0.001, explore decay 0.00001, action repeat 1, with soft update, 0.2 DROPOUT, NO 0.001 L2 on actor/critic
-            23. 1x experiments, xx episodes (xx solution) with batch size/buffer 128/1,000,000, gamma/tau .99/.01,
-               learning rate 0.00001, explore decay 0.00001, action repeat 1, with soft update, 0.2 DROPOUT, NO 0.001 L2 on actor/critic
-             
+               no explore after initial random buffer filling
 
         solve mt climber with copter MAX network
             1. 323 episodes (no solution) with batch size/buffer 128/100,000, gamma/tau .995/.005
@@ -814,14 +879,14 @@ class DDPG():
         """
 
         # Action Repeat
-        self.action_repeat = 1
+        self.action_repeat = 2
         self.state_size = env.observation_space.shape[0] * self.action_repeat
 
         # select network based on enviromnet type
-        self.learningRate = 0.0001  # 0.00025 Atari paper learning rate, 0.0000625 Rainbow learning rate
+        self.learningRate = 0.00001  # 0.0001 default MtC, 0.00025 Atari paper learning rate, 0.0000625 Rainbow learning rate
         self.learnFrequency = 1 # how many steps per training
         self.dropoutRate = 0.2
-        # QuadCopter, QuadCopterBig, QuadCopterMax, QuadCopterBigELU, QuadCopterBigNoDropout, QuadCopterBatchNorm, 
+        # QuadCopter, QuadCopterBig, QuadCopterMax, QuadCopterBigELU, QuadCopterBigNoDropout, QuadCopterBatchNorm
         # Lillicrap, Hausknecht
         network_arch = "QuadCopterBig"
         if envType == "imageStateContinuousAction":
@@ -844,10 +909,10 @@ class DDPG():
         # Replay memory
         if self.envType == "continousStateAction":
             self.buffer_size = 1000000 # 1,000,000 is standard. Most episodes are around 1000 steps in OpenAI for a complete run 
-            self.batch_size = 128 
+            self.batch_size = 256 # 128 for copter big gives good results
         elif self.envType == "imageStateContinuousAction":
             self.buffer_size = 10000 # 100000 in other solution to car racing with DDQN with dropout
-            self.batch_size = 64
+            self.batch_size = 32
         else:    
             raise("\nDDPG:__init__: ERROR! unsupported env type!\n")            
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
@@ -860,11 +925,11 @@ class DDPG():
         self.tau = 0.01 # 1.0 # 0.005 #0.01, percentage of local weights to put into the target network
     
         # Exploration Policy (expodential decay based on lifetime steps)
-        self.explore_start = 0.0            # exploration probability at start
+        self.explore_start = 1.0            # exploration probability at start
         self.explore_stop = 0.00            # minimum exploration probability 
-        self.explore_decay_rate = 0.00001   # exponential decay rate for exploration prob
+        self.explore_decay_rate = 0.95       # amount of explore prob to keep each episode
         self.exploreStep = 0
-        self.explore_p = 1.0
+        self.explore_p = self.explore_start
 
         # step and episode counters   
         self.stepCount = 0
@@ -898,9 +963,7 @@ class DDPG():
 
     def reset_episode(self, state):
         
-        # Since the env is OpenAi Gym 'MountainCarContinuous-v0' environment, 
-        # we must expand the state returned from the gym environment according to 
-        # our chosen action_repeat parameter value.
+        # expand the state returned from the gym environment according action_repeat.
         state = np.concatenate([state] * self.action_repeat) 
         
         if self.envType == "imageStateContinuousAction":
@@ -911,9 +974,22 @@ class DDPG():
         # increase episode counters
         self.i_episode += 1
         
+        if len(self.memory) > self.memory_full_enough(): # batch_size, fill buffer_size before training to stabilize training process??
+            self.exploreStep += 1
+            self.explore_p *= self.explore_decay_rate 
+            
+            # cycle the exploration policy between explore and exploit
+            # this helps the agent get unstuck follow bad actions over and over
+            # additonally, without training, there are some state-action pairs that will never be available to explore
+#            if self.explore_p < self.explore_stop * 2:
+#                self.exploreStep = self.explore_start           
+
         print("\tresetting episode... next explore_p: ", self.explore_p)
         
         return state
+
+    def memory_full_enough(self):
+        return self.batch_size * 10 * self.action_size * self.action_size
 
     def step(self, next_state):
         
@@ -941,19 +1017,33 @@ class DDPG():
             state = unit_image(state)
        
         # return a random action if memory is not filled (inital network weights)
-        if len(self.memory) < self.batch_size * 100 * self.action_size * self.action_size: # batch_size, fill buffer_size before training to stabilize training process??
-            return self.env.action_space.sample()
+        if len(self.memory) < self.memory_full_enough(): # batch_size, fill buffer_size before training to stabilize training process??
+            action = self.env.action_space.sample()
+             # for car racing env, choose the max of gas or brake
+            if self.envType == "imageStateContinuousAction":
+                if action[1] > action [2]:
+                    action[2] = 0
+                else:
+                    action[1] = 0
+
+            return action
         
         # Explore or Exploit
         # Use expodentially decaying noise, more consistant results across environments than OU noise
-        self.explore_p = self.explore_stop + (self.explore_start - self.explore_stop)*np.exp(-self.explore_decay_rate*self.exploreStep) 
         # use sinusoid instead, up and down?
-#        self.explore_p *= (np.sin(self.exploreStep/10000) + 1) / 2 
-#        print("explore p:", self.explore_p)
-        self.exploreStep += 1
         if self.explore_p > np.random.rand() and mode == "train":
             # Make a random action if in training mode to explore the environment
-            action = self.env.action_space.sample()
+#            action = self.env.action_space.sample()       
+            
+            # use correlated noise, with a percentage of noise based on the current explore rate
+            if self.envType == "continousStateAction":
+                state = np.reshape(state, [-1, self.state_size])
+            elif self.envType == "imageStateContinuousAction":
+                state = np.expand_dims(state, axis=0)  # for img state space
+
+            agentAction = self.actor_local.model.predict(state)[0]                 
+            randAction = self.env.action_space.sample()
+            action = agentAction * (1-self.explore_p) + randAction * self.explore_p            
                        
         else:
             """Returns action(s) for given state(s) as per current policy."""
@@ -973,19 +1063,21 @@ class DDPG():
 #            randAction = self.env.action_space.sample()
 #            action = agentAction * (1-self.explore_p) + randAction * self.explore_p            
 #            print("\tagent steps cnt: ", self.stepCount, ", with action:", action)
-        
-        # cycle the exploration policy between explore and exploit
-        # this helps the agent get unstuck follow bad actions over and over
-#        if self.explore_p < self.explore_stop * 2:
-#            self.exploreStep = 1000           
-        
+            
+
+        # for car racing env, choose the max of gas or brake
+        if self.envType == "imageStateContinuousAction":
+            if action[1] > action [2]:
+                action[2] = 0
+            else:
+                action[1] = 0
+               
         return action
 
     def learn(self, action, reward, next_state, done):
         
         # Ensure that size of next_state as returned from the 
-        # environment is increased in 
-        # size according to the action_repeat parameter's value.
+        # environment is increased in size according to action_repeat
         next_state = np.concatenate([next_state] * self.action_repeat) 
         
         if self.envType == "imageStateContinuousAction":
@@ -996,7 +1088,7 @@ class DDPG():
 
         # Learn, if enough samples are available in memory
         # Check step count to avoid loading and unloading the GPU all the time
-        if len(self.memory) > self.batch_size * 100 and self.stepCount % self.learnFrequency == 0:
+        if len(self.memory) > self.memory_full_enough() and self.stepCount % self.learnFrequency == 0:
 #            print("\t\tlearning on total training step count: ", self.stepCount)
             experiences = self.memory.sample(self.batch_size)
         
@@ -1028,6 +1120,11 @@ class DDPG():
                 actions_next = self.actor_target.model.predict_on_batch(next_states)
                 for a in actions_next: # scale output to match env ranges
                     a = scale_output(a, self.action_range, self.action_low)
+                    if self.envType == "imageStateContinuousAction":
+                        if a[1] > a[2]:
+                            a[2] = 0
+                        else:
+                            a[1] = 0
 
                 Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
         

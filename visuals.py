@@ -29,8 +29,8 @@ def examine_environment(env):
     
     # Explore state (observation) space
     print("State space:", env.observation_space)
-    print("- low:", env.observation_space.low)
-    print("- high:", env.observation_space.high)
+#    print("- low:", env.observation_space.low)
+#    print("- high:", env.observation_space.high)
     
     # Generate some samples from the state space 
     print("State space samples:")
@@ -136,7 +136,7 @@ def plot_scores(scores, rolling_window=50):
     plt.plot(rolling_mean);
     return rolling_mean
 
-def plot_score_from_file(file_to_read):
+def plot_score_from_file(file_to_read, xmin, xmax, fig_number):
     # Load simulation results from the .csv file
     results = pd.read_csv(file_to_read)
     
@@ -157,12 +157,12 @@ def plot_score_from_file(file_to_read):
 #    plt.show()  
 #    
     # plot the sum rewards
-    plt.figure(4)
+    plt.figure(fig_number)
     plt.plot(episode_rewards_sum, label='sum rewards')
     plt.plot(smoothed_sum, label='running mean')
     plt.legend()
     axes = plt.gca()
-    axes.set_ylim([-250,250])
+    axes.set_ylim([xmin,xmax])
     plt.show()  
 
 

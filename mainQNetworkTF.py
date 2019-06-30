@@ -14,8 +14,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Classic Control - Continuous State and Discrete Action Spaces
-#env = gym.make('MountainCar-v0') # needs Discretized or better
-env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
+env = gym.make('MountainCar-v0') # needs Discretized or better
+#env = gym.make('Acrobot-v1')      # needs Discretized, Tile Encoding or better
 #env = gym.make('CartPole-v1')    # needs Deep Q Learning to do well?
 
 # Initialize the simulation
@@ -57,8 +57,8 @@ state, reward, done, _ = env.step(env.action_space.sample())
 
 
 # Now train with experiences
-train_episodes = 1000          # max number of episodes to learn from
-max_steps = 200                # max steps in an episode
+train_episodes = 2000          # max number of episodes to learn from
+max_steps = 1000                # max steps in an episode
 gamma = 0.99                   # future reward discount
 
 saver = tf.train.Saver()
