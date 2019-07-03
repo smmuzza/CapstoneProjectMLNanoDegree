@@ -13,11 +13,18 @@ import datetime
 
 from visuals import plot_scores
 
+
+# Importing gc module 
+import gc 
+gc.enable()
+
+#gc.set_debug(gc.DEBUG_LEAK)
+  
 def scale_output(x, action_range, action_low):
     temp = (np.array(x) * np.array(action_range)) + np.array(action_low)
     return temp  
 
-def interact(agent, env, num_episodes=20000, mode='train', file_output="results.txt", renderSkip=25):
+def interact(agent, env, num_episodes=20000, mode='train', file_output="results.txt", renderSkip=50):
     """Run agent in given reinforcement learning environment and return scores."""
     
     # Save simulation results to a CSV file.
@@ -42,6 +49,15 @@ def interact(agent, env, num_episodes=20000, mode='train', file_output="results.
             actionList = []
             start_time = time.time()
 
+            # Returns the number of 
+            # objects it has collected 
+            # and deallocated 
+            collected = gc.collect() 
+              
+            # Prints Garbage collector  
+            # as 0 object 
+            print("Garbage collector: collected", "%d objects." % collected) 
+
             # Interact with the Environment in steps until done
             while not done:
                 # 1. agent action given environment state
@@ -64,6 +80,7 @@ def interact(agent, env, num_episodes=20000, mode='train', file_output="results.
                 if(episode_steps % renderSkip == 0): # and mode != 'train':
                     env.render()
                     print("\tstep: ", episode_steps, ", action:", action)
+                    sys.stdout.flush()
     
                 # gather episode results until the end of the episode
                 episode_total_reward += reward
@@ -82,7 +99,7 @@ def interact(agent, env, num_episodes=20000, mode='train', file_output="results.
             scores.append(episode_total_reward)
             
             # plot scores each 50 episodes
-            if(i_episode % 25 == 0):
+            if(i_episode % 10 == 0):
                 plt.figure(1)
                 _ = plot_scores(scores)
 

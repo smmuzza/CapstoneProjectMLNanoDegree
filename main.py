@@ -12,14 +12,17 @@ np.set_printoptions(precision=3, linewidth=120)
 
 # Setup GPU TF stability
 import tensorflow as tf
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
 sess = tf.Session(config=tf.ConfigProto(
   allow_soft_placement=True, log_device_placement=True))
+
+import gc
+gc.enable()
 
 """
 # Create an environment and set random seed
 """
-selectedEnvironment = 7
+selectedEnvironment = 9
 env = 0
 envName = 0
 
@@ -76,7 +79,7 @@ print('New Experiment, training output file name: ', file_output_train)
 # Create Agent
 """
 agent = 0
-selectedAgent = 2
+selectedAgent = 3
 if selectedAgent == 0:
     # create the agent discretized state space Q Learning
     state_size = env.observation_space.shape[0]
@@ -115,8 +118,8 @@ if selectedAgent == 3:
 # run the simulation
 """
 import interact as sim
-num_episodes=2000
-sim.interact(agent, env, num_episodes, mode='train', file_output=file_output_train)
+num_episodes=2500
+sim.interact(agent, env, num_episodes, mode='train', file_output=file_output_train, renderSkip=100)
 
 """
 # Plot training scores obtained per episode
@@ -144,7 +147,7 @@ if selectedAgent == 2 or selectedAgent == 3:
 # Run in test mode and analyze scores obtained
 """
 print("[TEST] Training Done, now running tests...")
-test_scores = sim.interact(agent, env, num_episodes=1, mode='test', file_output=file_output_test)
+test_scores = sim.interact(agent, env, num_episodes=3, mode='test', file_output=file_output_test)
 plot_score_from_file(file_output_test, -300, 300, 1)
 
 """
@@ -167,4 +170,5 @@ print('Final score:', score)
 """
 # Exit Environment
 """
+#if 0:
 env.close()

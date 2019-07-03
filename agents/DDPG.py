@@ -275,7 +275,7 @@ class Actor:
             # Add final output layer with sigmoid activation
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
                 
-        elif self.netArch == "imageInputV1":     
+        elif self.netArch == "imageInputRGB":     
 
             # for img state space
             states = keras.layers.Input(shape=(96, 96, 3), name='states')
@@ -288,10 +288,33 @@ class Actor:
             net = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net)
             net = keras.layers.MaxPooling2D(pool_size=2)(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
+            
             net = keras.layers.Flatten()(net)
             net = keras.layers.Dense(units=512, activation='relu')(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
             net = keras.layers.Dense(units=256, activation='relu')(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
+            raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
+
+        elif self.netArch == "imageInputGrayscale":     
+
+            # for img state space
+            states = keras.layers.Input(shape=(96, 96, 1), name='states')
+            
+            net = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
+
+            net = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
+
+            net = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net)
+            net = keras.layers.MaxPooling2D(pool_size=2)(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
+
+            net = keras.layers.Flatten()(net)
+            net = keras.layers.Dense(units=512, activation='relu')(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
             raw_actions = keras.layers.Dense(units=self.action_size, activation='sigmoid', name='raw_actions')(net)
 
@@ -303,13 +326,9 @@ class Actor:
 #        actions = keras.layers.Lambda(lambda x: (x * self.action_range) + self.action_low, name='actions')(raw_actions)
 #        actions = keras.layers.Lambda(lambda x: x, name='actions')(raw_actions)
         actions = raw_actions
-        self.model = keras.models.Model(inputs=states, outputs=actions)
-#            actions = keras.layers.Lambda(scale_output, name='actions')(raw_actions)
-#            actions = keras.layers.Lambda(scale_putsParallel, scale_putsParallel_shape, name='actions')(raw_actions)
-           # SUSPECT THAT LAMBDA IS NOT SCALING PROPERLY FOR MULTI-D ACTIONS WITH DIFFERENT RANGES
 
         # Create Keras model
-#        self.model = keras.models.Model(inputs=states, outputs=actions)
+        self.model = keras.models.Model(inputs=states, outputs=actions)
 
         # Define loss function using action value (Q value) gradients
         # These gradients will need to be computed using the critic model, and
@@ -612,7 +631,7 @@ class Critic:
             net = layers.Add()([net_states, net_actions])
             net = layers.Dense(units=128 * bigUp, activation='relu')(net)
     
-        elif self.netArch == "imageInputV1":     
+        elif self.netArch == "imageInputRGB":     
             # for img state space
             actions = keras.layers.Input(shape=(self.action_size,), name='actions')
             # Add hidden layer(s) for action pathway
@@ -628,6 +647,7 @@ class Critic:
             net_states = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net_states)
             net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
             net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
+            
             net_states = keras.layers.Flatten()(net_states)
             net_states = keras.layers.Dense(units=512, activation='relu')(net_states)
             net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
@@ -638,6 +658,32 @@ class Critic:
             net = keras.layers.Dense(units=256, activation='relu')(net)
             net = keras.layers.Dropout(self.dropout_rate)(net)
              
+        elif self.netArch == "imageInputGrayscale":     
+            # for img state space
+            actions = keras.layers.Input(shape=(self.action_size,), name='actions')
+            # Add hidden layer(s) for action pathway
+            net_actions = keras.layers.Dense(units=512, activation='relu')(actions)
+    
+            states = keras.layers.Input(shape=(96, 96, 1), name='states')
+
+            net_states = keras.layers.Conv2D(32, (8, 8), strides=[4, 4], padding='same', activation='relu')(states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
+
+            net_states = keras.layers.Conv2D(64, (4, 4), strides=[2, 2], padding='same', activation='relu')(net_states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
+
+            net_states = keras.layers.Conv2D(64, (3, 3), padding='same', activation='relu')(net_states)
+            net_states = keras.layers.MaxPooling2D(pool_size=2)(net_states)
+            net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
+
+            net_states = keras.layers.Flatten()(net_states)
+            net_states = keras.layers.Dense(units=512, activation='relu')(net_states)
+            net_states = keras.layers.Dropout(self.dropout_rate)(net_states)
+    
+            net = keras.layers.Add()([net_states, net_actions])
+    
 
         # Add final output layer to produce action values (Q values). The final output
         # of this model is the Q-value for any given (state, action) pair.
@@ -670,8 +716,18 @@ class Critic:
 # - image rescaled so all pixels are between 0 and 1
 """
 def unit_image(image):
-    image = np.array(image)
     return np.true_divide(image, 255.0)
+
+"""
+# Converts an RGB image to grayscale
+# Parameters:
+# - image: An RGB (nxmx3) array of floats
+# Outputs:
+# - A (nxmx1) array of floats in the range [0,255] representing a 
+#   weighted average of the color channels of 'image'
+"""
+def grayscale_img(image):
+    return np.dot(image[..., :3], [0.299, 0.587, 0.114])
    
 """    
 # scales the output actions from the network
@@ -680,11 +736,7 @@ def unit_image(image):
 def scale_output(x, action_range, action_low):
     temp = (np.array(x) * np.array(action_range)) + np.array(action_low)
     return temp  
-
-def descale_output(x, action_range, action_low):
-    temp = (np.array(x) / np.array(action_range)) - np.array(action_low)
-    return temp
-           
+         
     
 class DDPG():
     """
@@ -879,28 +931,29 @@ class DDPG():
         """
 
         # Action Repeat
-        self.action_repeat = 2
+        self.action_repeat = 1
         self.state_size = env.observation_space.shape[0] * self.action_repeat
 
         # select network based on enviromnet type
-        self.learningRate = 0.00001  # 0.0001 default MtC, 0.00025 Atari paper learning rate, 0.0000625 Rainbow learning rate
+        self.learningRate = 0.0001  # 0.0001 default MtC, 0.00025 Atari paper learning rate, 0.0000625 Rainbow learning rate
         self.learnFrequency = 1 # how many steps per training
         self.dropoutRate = 0.2
         # QuadCopter, QuadCopterBig, QuadCopterMax, QuadCopterBigELU, QuadCopterBigNoDropout, QuadCopterBatchNorm
         # Lillicrap, Hausknecht
-        network_arch = "QuadCopterBig"
+        # imageInputRGB, imageInputGrayscale
+        self.network_arch = "QuadCopterBig"
         if envType == "imageStateContinuousAction":
-            network_arch = "imageInputV1"
+            self.network_arch = "imageInputGrayscale"
 
         # Actor (Policy) Model
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, network_arch, \
+        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.network_arch, \
                                  self.learningRate, self.dropoutRate)
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, network_arch, \
+        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.network_arch, \
                                   self.learningRate, self.dropoutRate)
 
         # Critic (Value) Model
-        self.critic_local = Critic(self.state_size, self.action_size, network_arch, self.learningRate, self.dropoutRate)
-        self.critic_target = Critic(self.state_size, self.action_size, network_arch, self.learningRate, self.dropoutRate)
+        self.critic_local = Critic(self.state_size, self.action_size, self.network_arch, self.learningRate, self.dropoutRate)
+        self.critic_target = Critic(self.state_size, self.action_size, self.network_arch, self.learningRate, self.dropoutRate)
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
@@ -909,10 +962,10 @@ class DDPG():
         # Replay memory
         if self.envType == "continousStateAction":
             self.buffer_size = 1000000 # 1,000,000 is standard. Most episodes are around 1000 steps in OpenAI for a complete run 
-            self.batch_size = 256 # 128 for copter big gives good results
+            self.batch_size = 128 # 128 for copter big gives good results
         elif self.envType == "imageStateContinuousAction":
-            self.buffer_size = 10000 # 100000 in other solution to car racing with DDQN with dropout
-            self.batch_size = 32
+            self.buffer_size = 100000 # 100000 in other solution to car racing with DDQN with dropout
+            self.batch_size = 32 # 32 seems to be the max batch size for stable training on rgb
         else:    
             raise("\nDDPG:__init__: ERROR! unsupported env type!\n")            
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
@@ -927,9 +980,11 @@ class DDPG():
         # Exploration Policy (expodential decay based on lifetime steps)
         self.explore_start = 1.0            # exploration probability at start
         self.explore_stop = 0.00            # minimum exploration probability 
-        self.explore_decay_rate = 0.95       # amount of explore prob to keep each episode
+        self.explore_decay_rate = 0.9       # amount of explore prob to keep each episode
         self.exploreStep = 0
         self.explore_p = self.explore_start
+        self.explore_min_hist_size = np.max([self.batch_size * 100, 10000])
+        assert(self.explore_min_hist_size < self.buffer_size)
 
         # step and episode counters   
         self.stepCount = 0
@@ -942,7 +997,7 @@ class DDPG():
         # print out the network paramters for experimental result logging
         print("*************************************")
         print("*** DDPG Agent Paramter ***")
-        print("- network architecture chosen: ", network_arch)
+        print("- network architecture chosen: ", self.network_arch)
         print("[ ACTOR MODEL SUMMARY ]")
         self.actor_local.model.summary()
         print("[ CRITIC MODEL SUMMARY ]")
@@ -967,6 +1022,10 @@ class DDPG():
         state = np.concatenate([state] * self.action_repeat) 
         
         if self.envType == "imageStateContinuousAction":
+            if self.network_arch == "imageInputGrayscale":
+                state = grayscale_img(state)
+                state = np.expand_dims(state, axis=2)
+
             state = unit_image(state) # normalize to between 0-1
         
         self.last_state = state
@@ -989,7 +1048,7 @@ class DDPG():
         return state
 
     def memory_full_enough(self):
-        return self.batch_size * 10 * self.action_size * self.action_size
+        return self.explore_min_hist_size
 
     def step(self, next_state):
         
@@ -998,6 +1057,10 @@ class DDPG():
         next_state = np.concatenate([next_state] * self.action_repeat) 
         
         if self.envType == "imageStateContinuousAction":
+            if self.network_arch == "imageInputGrayscale":
+                next_state = grayscale_img(next_state)
+                next_state = np.expand_dims(next_state, axis=2)
+                
             next_state = unit_image(next_state)
         
         # increase step count
@@ -1014,17 +1077,22 @@ class DDPG():
         state = np.concatenate([state] * self.action_repeat) 
         
         if self.envType == "imageStateContinuousAction":
+            if self.network_arch == "imageInputGrayscale":
+                state = grayscale_img(state)
+                state = np.expand_dims(state, axis=2)
+               
             state = unit_image(state)
        
         # return a random action if memory is not filled (inital network weights)
         if len(self.memory) < self.memory_full_enough(): # batch_size, fill buffer_size before training to stabilize training process??
             action = self.env.action_space.sample()
-             # for car racing env, choose the max of gas or brake
-            if self.envType == "imageStateContinuousAction":
-                if action[1] > action [2]:
-                    action[2] = 0
-                else:
-                    action[1] = 0
+            
+            # for car racing env, choose the max of gas or brake
+#            if self.envType == "imageStateContinuousAction":
+#                if action[1] > action [2]:
+#                    action[2] = 0
+#                else:
+#                    action[1] = 0
 
             return action
         
@@ -1032,18 +1100,18 @@ class DDPG():
         # Use expodentially decaying noise, more consistant results across environments than OU noise
         # use sinusoid instead, up and down?
         if self.explore_p > np.random.rand() and mode == "train":
-            # Make a random action if in training mode to explore the environment
-#            action = self.env.action_space.sample()       
             
             # use correlated noise, with a percentage of noise based on the current explore rate
             if self.envType == "continousStateAction":
                 state = np.reshape(state, [-1, self.state_size])
-            elif self.envType == "imageStateContinuousAction":
-                state = np.expand_dims(state, axis=0)  # for img state space
+                agentAction = self.actor_local.model.predict(state)[0]                 
+                randAction = self.env.action_space.sample()
+                action = agentAction * (1-self.explore_p) + randAction * self.explore_p            
 
-            agentAction = self.actor_local.model.predict(state)[0]                 
-            randAction = self.env.action_space.sample()
-            action = agentAction * (1-self.explore_p) + randAction * self.explore_p            
+            # Make a random action if in training mode to explore the environment
+            elif self.envType == "imageStateContinuousAction":
+                action = self.env.action_space.sample()       
+
                        
         else:
             """Returns action(s) for given state(s) as per current policy."""
@@ -1066,11 +1134,11 @@ class DDPG():
             
 
         # for car racing env, choose the max of gas or brake
-        if self.envType == "imageStateContinuousAction":
-            if action[1] > action [2]:
-                action[2] = 0
-            else:
-                action[1] = 0
+#        if self.envType == "imageStateContinuousAction":
+#            if action[1] > action [2]:
+#                action[2] = 0
+#            else:
+#                action[1] = 0
                
         return action
 
@@ -1081,6 +1149,10 @@ class DDPG():
         next_state = np.concatenate([next_state] * self.action_repeat) 
         
         if self.envType == "imageStateContinuousAction":
+            if self.network_arch == "imageInputGrayscale":
+                next_state = grayscale_img(next_state)
+                next_state = np.expand_dims(next_state, axis=2)
+            
             next_state = unit_image(next_state)
         
         # Save experience / reward
@@ -1120,11 +1192,13 @@ class DDPG():
                 actions_next = self.actor_target.model.predict_on_batch(next_states)
                 for a in actions_next: # scale output to match env ranges
                     a = scale_output(a, self.action_range, self.action_low)
-                    if self.envType == "imageStateContinuousAction":
-                        if a[1] > a[2]:
-                            a[2] = 0
-                        else:
-                            a[1] = 0
+
+                     # for car racing env, choose the max of gas or brake
+#                    if self.envType == "imageStateContinuousAction":
+#                        if a[1] > a[2]:
+#                            a[2] = 0
+#                        else:
+#                            a[1] = 0
 
                 Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
         
