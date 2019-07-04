@@ -22,7 +22,7 @@ gc.enable()
 """
 # Create an environment and set random seed
 """
-selectedEnvironment = 9
+selectedEnvironment = 6
 env = 0
 envName = 0
 
@@ -79,7 +79,7 @@ print('New Experiment, training output file name: ', file_output_train)
 # Create Agent
 """
 agent = 0
-selectedAgent = 3
+selectedAgent = 2
 if selectedAgent == 0:
     # create the agent discretized state space Q Learning
     state_size = env.observation_space.shape[0]
