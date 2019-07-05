@@ -964,7 +964,7 @@ class DDPG():
         # Replay memory
         if self.envType == "continousStateAction":
             self.buffer_size = 1000000 # 1,000,000 is standard. Most episodes are around 1000 steps in OpenAI for a complete run 
-            self.batch_size = 128 # 128 for copter big gives good results
+            self.batch_size = 256 # 128 for copter big gives good results
         elif self.envType == "imageStateContinuousAction":
             self.buffer_size = 100000 # 100000 in other solution to car racing with DDQN with dropout
             self.batch_size = 32 # 32 seems to be the max batch size for stable training on rgb

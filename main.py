@@ -22,7 +22,7 @@ gc.enable()
 """
 # Create an environment and set random seed
 """
-selectedEnvironment = 6
+selectedEnvironment = 8
 env = 0
 envName = 0
 
