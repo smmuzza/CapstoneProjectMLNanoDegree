@@ -17,7 +17,7 @@ def examine_environment(env):
 
     # Run a random agent
     score = 0
-    for t in range(100):
+    for t in range(10):
         action = env.action_space.sample()
         env.render()
         state, reward, done, _ = env.step(action)

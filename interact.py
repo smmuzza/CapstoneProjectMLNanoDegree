@@ -56,7 +56,7 @@ def interact(agent, env, num_episodes=20000, mode='train', file_output="results.
               
             # Prints Garbage collector  
             # as 0 object 
-            print("Garbage collector: collected", "%d objects." % collected) 
+            print("\tGarbage collector: collected", "%d objects." % collected) 
 
             # Interact with the Environment in steps until done
             while not done:

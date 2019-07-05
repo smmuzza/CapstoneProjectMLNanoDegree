@@ -684,6 +684,8 @@ class Critic:
     
             net = keras.layers.Add()([net_states, net_actions])
     
+            net = keras.layers.Dense(units=256, activation='relu')(net)
+            net = keras.layers.Dropout(self.dropout_rate)(net)
 
         # Add final output layer to produce action values (Q values). The final output
         # of this model is the Q-value for any given (state, action) pair.
@@ -931,7 +933,7 @@ class DDPG():
         """
 
         # Action Repeat
-        self.action_repeat = 1
+        self.action_repeat = 2
         self.state_size = env.observation_space.shape[0] * self.action_repeat
 
         # select network based on enviromnet type
@@ -979,8 +981,8 @@ class DDPG():
     
         # Exploration Policy (expodential decay based on lifetime steps)
         self.explore_start = 1.0            # exploration probability at start
-        self.explore_stop = 0.00            # minimum exploration probability 
-        self.explore_decay_rate = 0.9       # amount of explore prob to keep each episode
+        self.explore_stop = 0.01            # minimum exploration probability 
+        self.explore_decay_rate = 0.95      # amount of explore prob to keep each episode
         self.exploreStep = 0
         self.explore_p = self.explore_start
         self.explore_min_hist_size = np.max([self.batch_size * 100, 10000])
@@ -1041,7 +1043,7 @@ class DDPG():
             # this helps the agent get unstuck follow bad actions over and over
             # additonally, without training, there are some state-action pairs that will never be available to explore
 #            if self.explore_p < self.explore_stop * 2:
-#                self.exploreStep = self.explore_start           
+#                self.explore_p = self.explore_start           
 
         print("\tresetting episode... next explore_p: ", self.explore_p)
         

@@ -118,7 +118,7 @@ if selectedAgent == 3:
 # run the simulation
 """
 import interact as sim
-num_episodes=2500
+num_episodes=500
 sim.interact(agent, env, num_episodes, mode='train', file_output=file_output_train, renderSkip=100)
 
 """
